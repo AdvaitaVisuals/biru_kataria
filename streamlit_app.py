@@ -19,10 +19,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-API_BASE = "http://localhost:8000"
+# Production Vercel URL (Update this with your actual Vercel domain)
+DEFAULT_API_BASE = "https://biru-kataria.vercel.app" 
+API_BASE = st.sidebar.text_input("Backend API URL", value=DEFAULT_API_BASE)
 
 def get_health():
-    try: return requests.get(f"{API_BASE}/health", timeout=2).json()
+    try: return requests.get(f"{API_BASE}/health", timeout=3).json()
     except: return None
 
 def get_assets():

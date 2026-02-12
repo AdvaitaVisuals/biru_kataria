@@ -58,48 +58,10 @@ def process_vizard_pipeline(asset_id: int):
             return
 
         asset.meta_data["vizard_project_id"] = project_id
+        # We don't poll here anymore (Serverless time limit). 
+        # The GET /assets/{id} endpoint will poll lazily.
         db.commit()
-
-        # 2. Polling for clips (In a real worker, we'd use a separate polling task, 
-        # but for MVP we will sleep-poll for a few minutes)
-        max_attempts = 20
-        clips_data = []
-        for _ in range(max_attempts):
-            logger.info(f"Polling Vizard for project {project_id}...")
-            clips_data = vizard.get_clips(project_id)
-            if clips_data: 
-                break
-            time.sleep(30) # Wait 30s between polls
-
-        if not clips_data:
-            asset.status = ContentStatus.FAILED
-            asset.error_message = "Vizard timeout: Clips not ready after 10 minutes."
-            db.commit()
-            return
-
-        # 3. Process and Save Clips
-        for v_clip in clips_data[:15]: # Take top viral clips
-            clip_url = v_clip.get("videoUrl")
-            if not clip_url: continue
-
-            # Generate Captions via Agent #4
-            caps = captioner.generate_caption(v_clip.get("transcript", "Haryanvi viral clip"))
-            
-            clip = Clip(
-                asset_id=asset_id,
-                start_time=0.0, # Vizard gives relative clips
-                end_time=0.0,
-                duration=v_clip.get("duration", 0),
-                file_path=clip_url, # External URL for direct playback
-                status=ClipStatus.READY,
-                virality_score=v_clip.get("viralScore", 0.0),
-                transcription=json.dumps(caps)
-            )
-            db.add(clip)
-
-        asset.status = ContentStatus.READY
-        db.commit()
-        logger.info(f"Vizard processing complete for asset {asset_id}")
+        logger.info(f"Vizard project {project_id} initialized for asset {asset_id}")
 
     except Exception as e:
         logger.error(f"Vizard Pipeline Failed: {e}")

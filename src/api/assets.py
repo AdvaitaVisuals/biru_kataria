@@ -124,16 +124,55 @@ async def process_asset_endpoint(asset_id: int, background_tasks: BackgroundTask
 async def get_asset(asset_id: int, db: Session = Depends(get_db)):
     asset = db.query(ContentAsset).filter(ContentAsset.id == asset_id).first()
     if not asset: raise HTTPException(status_code=404)
+
+    # LAZY POLLING: If it's still processing, check Vizard
+    if asset.status == ContentStatus.PROCESSING and asset.meta_data.get("vizard_project_id"):
+        from src.agents.vizard_agent import VizardAgent
+        from src.agents.captioner import CaptionAgent
+        import json
+        
+        vizard = VizardAgent()
+        clips_data = vizard.get_clips(asset.meta_data["vizard_project_id"])
+        
+        if clips_data:
+            logger.info(f"Lazy Polling: Found {len(clips_data)} clips for asset {asset_id}")
+            captioner = CaptionAgent()
+            for v_clip in clips_data[:15]:
+                clip_url = v_clip.get("videoUrl")
+                if not clip_url: continue
+                
+                # Check if clip already exists to avoid duplicates
+                existing = db.query(Clip).filter(Clip.asset_id == asset_id, Clip.file_path == clip_url).first()
+                if existing: continue
+
+                caps = captioner.generate_caption(v_clip.get("transcript", ""))
+                clip = Clip(
+                    asset_id=asset_id,
+                    start_time=0.0,
+                    end_time=0.0,
+                    duration=v_clip.get("duration", 0),
+                    file_path=clip_url,
+                    status=ClipStatus.READY,
+                    virality_score=v_clip.get("viralScore", 0.0),
+                    transcription=json.dumps(caps)
+                )
+                db.add(clip)
+            
+            asset.status = ContentStatus.READY
+            db.commit()
+            db.refresh(asset)
+
     clips = db.query(Clip).filter(Clip.asset_id == asset_id).all()
     
     return AssetStatusResponse(
         id=asset.id,
         title=asset.title,
-        status=asset.status.value,
+        status=asset.status.value if hasattr(asset.status, 'value') else asset.status,
         error_message=asset.error_message,
         clips=[ClipResponse(
             id=c.id, asset_id=c.asset_id, start_time=c.start_time, end_time=c.end_time,
-            duration=c.duration, status=c.status.value, file_path=c.file_path,
+            duration=c.duration, status=c.status.value if hasattr(c.status, 'value') else c.status, 
+            file_path=c.file_path,
             virality_score=c.virality_score, transcription=c.transcription
         ).model_dump() for c in clips]
     )
