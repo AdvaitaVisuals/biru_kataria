@@ -10,7 +10,7 @@ from src.schemas import WhatsAppMessageResponse
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 
-GRAPH_API_URL = "https://graph.facebook.com/v21.0"
+GRAPH_API_URL = "https://graph.facebook.com/v18.0"
 
 def send_whatsapp_message(to_number: str, message_body: str):
     if not settings.whatsapp_token or not settings.phone_id:
