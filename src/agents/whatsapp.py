@@ -10,15 +10,19 @@ from src.schemas import WhatsAppMessageResponse
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 
-GRAPH_API_URL = "https://graph.facebook.com/v18.0"
+GRAPH_API_URL = "https://graph.facebook.com/v21.0"
 
 def send_whatsapp_message(to_number: str, message_body: str):
     if not settings.whatsapp_token or not settings.phone_id: 
         logger.error("Token or Phone ID missing")
         return None
+    
+    # Meta API expects digits only (no +)
+    clean_to = "".join(filter(str.isdigit, to_number))
+    
     url = f"{GRAPH_API_URL}/{settings.phone_id}/messages"
     headers = {"Authorization": f"Bearer {settings.whatsapp_token}", "Content-Type": "application/json"}
-    payload = {"messaging_product": "whatsapp", "to": to_number, "type": "text", "text": {"body": message_body}}
+    payload = {"messaging_product": "whatsapp", "to": clean_to, "type": "text", "text": {"body": message_body}}
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=10)
         if resp.status_code != 200:
@@ -80,13 +84,19 @@ def download_whatsapp_media(media_id: str) -> str:
         return ""
 
 @router.get("/ping")
-async def whatsapp_ping():
-    return {
+async def whatsapp_ping(test: int = 0):
+    res = {
         "status": "online",
         "admin_set": bool(settings.admin_number),
-        "phone_id": settings.phone_id[:4] + "...",
-        "token_len": len(settings.whatsapp_token)
+        "phone_id": settings.phone_id[:4] + "..." if settings.phone_id else "MISSING",
+        "token_len": len(settings.whatsapp_token) if settings.whatsapp_token else 0
     }
+    if test == 1 and settings.admin_number:
+        resp = send_whatsapp_message(settings.admin_number, "🧬 *Quick Diagnostic*: Testing transmission from Biru Bhai.")
+        res["test_sent"] = True
+        res["api_status"] = resp.status_code if resp else "FAILED"
+        res["api_body"] = resp.json() if resp and resp.status_code == 200 else (resp.text if resp else "No Response")
+    return res
 
 @router.post("/webhook")
 async def receive_webhook(request: Request):

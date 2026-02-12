@@ -66,6 +66,8 @@ class WhatsAppMessage(Base):
     sender = Column(String)
     message = Column(Text)
     response = Column(Text, nullable=True)
+    status = Column(String, default="RECEIVED") # RECEIVED, SENT, FAILED
+    error_message = Column(Text, nullable=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
