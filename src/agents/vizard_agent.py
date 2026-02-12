@@ -24,7 +24,7 @@ class VizardAgent:
 
         endpoint = f"{self.BASE_URL}/project/create"
         headers = {
-            "api-key": self.api_key,
+            "VIZARDAI_API_KEY": self.api_key,
             "Content-Type": "application/json"
         }
         
@@ -58,7 +58,7 @@ class VizardAgent:
         Polls Vizard AI for the generated clips.
         """
         endpoint = f"{self.BASE_URL}/project/clip/list"
-        headers = {"api-key": self.api_key}
+        headers = {"VIZARDAI_API_KEY": self.api_key}
         params = {"projectId": project_id}
 
         try:
