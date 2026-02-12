@@ -9,11 +9,17 @@ Celery App Configuration — The Engine Room
 from celery import Celery
 from src.config import settings
 
-celery_app = Celery(
-    "biru_bhai",
-    broker=settings.celery_broker_url,
-    backend=settings.celery_result_backend,
-)
+try:
+    celery_app = Celery(
+        "biru_bhai",
+        broker=settings.celery_broker_url,
+        backend=settings.celery_result_backend,
+    )
+except Exception as e:
+    import logging
+    logging.error(f"Celery failed to initialize: {e}")
+    # Fallback to a dummy app that won't crash imports
+    celery_app = Celery("biru_bhai")
 
 celery_app.conf.update(
     # Serialization

@@ -99,22 +99,25 @@ from src.config import settings
 @app.on_event("startup")
 async def startup_event():
     logger.info("=" * 50)
-    logger.info("BIRU_BHAI is starting up...")
-    logger.info("Phase 2: Intelligence Layer Active")
+    logger.info(f"BIRU_BHAI is starting up (Env: {os.environ.get('VERCEL', 'Local')})")
     logger.info("=" * 50)
 
-    # Ensure FFmpeg is in PATH for Whisper
-    if settings.ffmpeg_path and os.path.exists(settings.ffmpeg_path):
-        ffmpeg_dir = os.path.dirname(settings.ffmpeg_path)
-        if ffmpeg_dir not in os.environ["PATH"]:
-            os.environ["PATH"] += os.pathsep + ffmpeg_dir
-            logger.info(f"Added FFmpeg to PATH: {ffmpeg_dir}")
+    # Skip local FFmpeg setup on Vercel
+    if not os.environ.get("VERCEL"):
+        if settings.ffmpeg_path and os.path.exists(settings.ffmpeg_path):
+            ffmpeg_dir = os.path.dirname(settings.ffmpeg_path)
+            if ffmpeg_dir not in os.environ["PATH"]:
+                os.environ["PATH"] += os.pathsep + ffmpeg_dir
+                logger.info(f"Added FFmpeg to PATH")
 
-    # Create DB tables if they don't exist (fallback — Alembic is primary)
-    from src.database import engine, Base
-    from src.models import ContentAsset, Clip, Post, StrategyDecision  # noqa: ensure models are loaded
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables verified")
+    # Create DB tables safely
+    try:
+        from src.database import engine, Base
+        from src.models import ContentAsset, Clip  # ensure models loaded
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
 
 
 if __name__ == "__main__":
