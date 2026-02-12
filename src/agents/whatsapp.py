@@ -18,14 +18,26 @@ def send_whatsapp_message(to_number: str, message_body: str):
     headers = {"Authorization": f"Bearer {settings.whatsapp_token}", "Content-Type": "application/json"}
     payload = {"messaging_product": "whatsapp", "to": to_number, "type": "text", "text": {"body": message_body}}
     try:
-        requests.post(url, headers=headers, json=payload, timeout=10)
-    except Exception as e: logger.error(f"Failed to send: {e}")
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        if resp.status_code != 200:
+            logger.error(f"WhatsApp API Error: {resp.status_code} - {resp.text}")
+        else:
+            logger.info(f"Message sent successfully to {to_number}")
+    except Exception as e:
+        logger.error(f"Technical failure sending WhatsApp: {e}")
 
 @router.get("/messages", response_model=list[WhatsAppMessageResponse])
 async def list_whatsapp_messages(db: Session = Depends(get_db)):
     from src.models import WhatsAppMessage
     messages = db.query(WhatsAppMessage).order_by(WhatsAppMessage.timestamp.desc()).limit(50).all()
     return messages
+
+@router.get("/test-msg")
+async def test_whatsapp_message():
+    if not settings.admin_number:
+        return {"error": "ADMIN_NUMBER not set in environment"}
+    send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Check*\n\nBhai, agar ye message mil raha hai toh token ekdum sahi hai! System Paad denge!")
+    return {"status": "Test message dispatched to admin", "to": settings.admin_number}
 
 from fastapi.responses import PlainTextResponse
 
