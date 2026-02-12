@@ -88,9 +88,17 @@ def download_whatsapp_media(media_id: str) -> str:
         # Get Media URL
         res = requests.get(f"{GRAPH_API_URL}/{media_id}", headers=headers, timeout=10)
         res.raise_for_status()
-        url = res.json().get("url")
+        media_data = res.json()
+        url = media_data.get("url")
+        mime_type = media_data.get("mime_type", "")
+        
         if not url: return ""
 
+        # Determine extension
+        import mimetypes
+        ext = mimetypes.guess_extension(mime_type) or ".bin"
+        if mime_type == "audio/ogg; codecs=opus": ext = ".ogg"
+        
         # Download file
         res = requests.get(url, headers=headers, timeout=30)
         res.raise_for_status()
@@ -98,7 +106,7 @@ def download_whatsapp_media(media_id: str) -> str:
         # Save to /tmp
         import os
         os.makedirs("/tmp/media", exist_ok=True)
-        file_path = f"/tmp/media/{media_id}.ogg"
+        file_path = f"/tmp/media/{media_id}{ext}"
         with open(file_path, "wb") as f:
             f.write(res.content)
         return file_path
@@ -134,6 +142,22 @@ async def receive_webhook(request: Request):
                 file_path = download_whatsapp_media(media_id)
                 if file_path:
                     await controller.handle_audio(from_num, file_path)
+            elif msg["type"] == "image":
+                # Send immediate Acknowledge
+                send_whatsapp_message(from_num, "⏳ Photo mil rahi hai... (Downloading)")
+                
+                media_id = msg["image"]["id"]
+                caption = msg["image"].get("caption", "")
+                
+                logger.info(f"Attempting to download image: {media_id}")
+                file_path = download_whatsapp_media(media_id)
+                
+                if file_path:
+                    logger.info(f"Image downloaded to {file_path}, handing to controller")
+                    await controller.handle_image(from_num, file_path, caption)
+                else:
+                    logger.error(f"Failed to download image: {media_id}")
+                    send_whatsapp_message(from_num, "❌ Photo download fail ho gayi. Server logs check karo.")
                     
     except Exception as e:
         logger.error(f"Webhook processing error: {e}")

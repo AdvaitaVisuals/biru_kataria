@@ -126,3 +126,60 @@ class WhatsAppController:
             return err_msg
         finally:
             db.close()
+
+    async def handle_image(self, sender: str, file_path: str, caption: str):
+        """Processes received images."""
+        import os
+        send_whatsapp_message(sender, "📸 Photo mil gayi, Bhai!")
+        
+        cmd = (caption or "").lower()
+        if "post" in cmd:
+            platforms = []
+            if "insta" in cmd or "instagram" in cmd:
+                platforms.append("INSTAGRAM")
+            if "fb" in cmd or "facebook" in cmd:
+                platforms.append("FACEBOOK")
+            
+            # Default to FB if only "Post" said?
+            if not platforms: platforms = ["FACEBOOK"]
+            
+            # Check for Instagram URL Requirement
+            if "INSTAGRAM" in platforms:
+                # Instagram Graph API requires a public, PERMANENT URL.
+                # Vercel's /tmp is ephemeral and cannot be reached by Instagram servers reliably.
+                # Facebook allows binary upload (multipart/form-data) which works from Vercel.
+                msg = "⚠️ Instagram API needs a public URL. Posting to Facebook instead (Direct Upload supported)."
+                send_whatsapp_message(sender, msg)
+                
+                if "FACEBOOK" not in platforms: platforms.append("FACEBOOK")
+                platforms.remove("INSTAGRAM")
+            
+            if not platforms:
+                 send_whatsapp_message(sender, "❌ Koi valid platform nahi bacha posting ke liye.")
+                 return
+
+            send_whatsapp_message(sender, f"🚀 Posting to {', '.join(platforms)}...")
+            
+            from src.agents.auto_poster import AutoPoster
+            poster = AutoPoster()
+            
+            # Prepare Caption
+            final_caption = caption
+            
+            results = poster.post_image(file_path, platforms, final_caption)
+            
+            success_msg = []
+            for res in results:
+                p = res.get('platform')
+                s = res.get('status')
+                pid = res.get('post_id', 'N/A')
+                if s == "POSTED":
+                    success_msg.append(f"✅ {p}: Posted! (ID: {pid})")
+                else:
+                    msg = res.get('message', 'Unknown Error')
+                    success_msg.append(f"❌ {p}: {msg}")
+            
+            send_whatsapp_message(sender, "\n".join(success_msg))
+
+        else:
+            send_whatsapp_message(sender, "🤔 Photo badhiya hai! Agar post karni hai toh caption mein 'Post on FB' likh ke bhej.")

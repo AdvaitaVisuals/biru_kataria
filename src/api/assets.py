@@ -147,5 +147,7 @@ async def list_assets(db: Session = Depends(get_db)):
         status=a.status.value if hasattr(a.status, 'value') else a.status,
         error_message=a.error_message,
         created_at=a.created_at,
-        updated_at=a.updated_at
+        updated_at=a.updated_at,
+        pipeline_step=a.pipeline_step,
+        pipeline_step_status=a.pipeline_step_status
     ) for a in assets]

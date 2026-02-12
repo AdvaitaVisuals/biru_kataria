@@ -49,36 +49,50 @@ class PipelineExecutor:
         if not asset:
             raise ValueError(f"Asset {asset_id} not found")
         if not yt_dlp:
-            raise RuntimeError("yt_dlp is not installed")
+            msg = "yt_dlp module not found. Install it via pip."
+            logger.error(msg)
+            return {"status": "FAILED", "error": msg}
 
         logger.info(f"Fetching metadata from {asset.source_url}")
 
-        ydl_opts = {'skip_download': True, 'quiet': True, 'no_warnings': True}
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(asset.source_url, download=False)
+        try:
+            ydl_opts = {'skip_download': True, 'quiet': True, 'no_warnings': True}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(asset.source_url, download=False)
+            
+            metadata = {
+                'title': info.get('title', 'Unknown'),
+                'duration': info.get('duration', 0),
+                'thumbnail': info.get('thumbnail', ''),
+                'description': (info.get('description', '') or '')[:500],
+                'view_count': info.get('view_count', 0),
+                'uploader': info.get('uploader', ''),
+                'video_id': info.get('id', ''),
+            }
 
-        metadata = {
-            'title': info.get('title', 'Unknown'),
-            'duration': info.get('duration', 0),
-            'thumbnail': info.get('thumbnail', ''),
-            'description': (info.get('description', '') or '')[:500],
-            'view_count': info.get('view_count', 0),
-            'uploader': info.get('uploader', ''),
-            'video_id': info.get('id', ''),
-        }
+            asset.title = metadata['title']
+            if not asset.pipeline_data:
+                asset.pipeline_data = {}
+            asset.pipeline_data['step_1_fetch'] = {
+                'status': 'COMPLETED',
+                'timestamp': datetime.utcnow().isoformat(),
+                'result': metadata,
+            }
+            db.commit()
 
-        asset.title = metadata['title']
-        if not asset.pipeline_data:
-            asset.pipeline_data = {}
-        asset.pipeline_data['step_1_fetch'] = {
-            'status': 'COMPLETED',
-            'timestamp': datetime.utcnow().isoformat(),
-            'result': metadata,
-        }
-        db.commit()
+            logger.info(f"Metadata fetched: title='{metadata['title']}', duration={metadata['duration']}s")
+            return {'status': 'COMPLETED', 'result': metadata}
 
-        logger.info(f"Metadata fetched: title='{metadata['title']}', duration={metadata['duration']}s")
-        return {'status': 'COMPLETED', 'result': metadata}
+        except Exception as e:
+            logger.error(f"Fetch failed for {asset_id}: {str(e)}", exc_info=True)
+            if not asset.pipeline_data: asset.pipeline_data = {}
+            asset.pipeline_data['step_1_fetch'] = {
+                'status': 'FAILED',
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat(),
+            }
+            db.commit()
+            return {'status': 'FAILED', 'error': str(e)}
 
     def _step_transcribe(self, asset_id: int, db: Session) -> dict:
         """Step 2: Transcribe audio via OpenAI Whisper API."""
@@ -343,12 +357,24 @@ Return JSON:
                 caps_data = json.loads(clip.transcription) if clip.transcription else {}
                 ig_caption = caps_data.get('ig', f"{asset.title} {hashtags}")
                 yt_title = caps_data.get('yt', asset.title)
+                fb_caption = caps_data.get('fb', ig_caption)
 
+                # Pass all captions via a dictionary if possible, or modify AutoPoster to accept them.
+                # For now, we will update the AutoPoster class to accept a 'captions' dict instead of single 'caption'
+                # But to avoid breaking changes without seeing AutoPoster refactor in this turn,
+                # we will assume AutoPoster.post_clip is being updated to accept a 'captions' arg OR we pass individual args.
+                
+                # Let's pass the dictionary as 'caption' and let AutoPoster handle it? No, that's messy.
+                # Use kwargs?
+                
+                # We will call the updated post_clip which we are about to write in the next tool call.
+                # It will accept 'captions={...}'
+                
                 results = poster.post_clip(
                     video_url=clip.file_path,
-                    caption=ig_caption,
-                    title=yt_title,
-                    platforms=["INSTAGRAM", "YOUTUBE"],
+                    captions=caps_data,  # Pass full dict
+                    title=asset.title,
+                    platforms=["INSTAGRAM", "YOUTUBE", "FACEBOOK"],
                 )
 
                 for r in results:

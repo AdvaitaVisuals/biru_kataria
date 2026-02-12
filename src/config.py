@@ -8,11 +8,16 @@ class Settings(BaseSettings):
 
     @property
     def get_database_url(self) -> str:
-        # Detect Vercel environment
-        if os.environ.get("VERCEL"):
-            return "sqlite:////tmp/biru_bhai.db"
-        return self.database_url
-    
+        if self.database_url and self.database_url.startswith("postgres://"):
+            return self.database_url.replace("postgres://", "postgresql://", 1)
+        return self.database_url or "sqlite:///biru_bhai.db"
+
+    @property
+    def api_base_url(self) -> str:
+        # Default to Vercel URL or local
+        if os.environ.get("VERCEL_URL"):
+            return f"https://{os.environ.get('VERCEL_URL')}"
+        return "https://biru-kataria.vercel.app"
     # Credentials from .env
     openai_api_key: str = ""
     whatsapp_token: str = ""
@@ -24,6 +29,8 @@ class Settings(BaseSettings):
     # Auto-Posting
     instagram_access_token: str = ""
     instagram_business_account_id: str = ""
+    facebook_page_id: str = ""  # New for FB Page Posting
+    facebook_access_token: str = "" # Specific Token for FB Page
     youtube_client_id: str = ""
     youtube_client_secret: str = ""
     youtube_refresh_token: str = ""

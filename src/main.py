@@ -19,6 +19,7 @@ import os
 from src.api.assets import router as assets_router
 from src.api.pipeline import router as pipeline_router
 from src.agents.whatsapp import router as whatsapp_router
+from src.api.calendar import router as calendar_router
 from src.schemas import HealthResponse
 
 # ============================================================
@@ -59,6 +60,7 @@ app.add_middleware(
 app.include_router(assets_router)
 app.include_router(pipeline_router)
 app.include_router(whatsapp_router)
+app.include_router(calendar_router)
 
 # Mount Media for static access (Clips/Uploads)
 base_dir = "/tmp" if os.environ.get("VERCEL") else "."

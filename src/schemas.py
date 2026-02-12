@@ -36,6 +36,8 @@ class AssetStatusResponse(BaseModel):
     meta_data: Optional[dict] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    pipeline_step: Optional[int] = 0
+    pipeline_step_status: Optional[str] = "PENDING"
     clips: list = Field(default_factory=list)
 
     class Config:

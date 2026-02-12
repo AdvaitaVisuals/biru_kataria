@@ -146,6 +146,9 @@
                 <div class="nav-item" onclick="showSection('section-analytics', this)">
                     <span class="text-xl">📊</span> Analytics
                 </div>
+                <div class="nav-item" onclick="showSection('section-calendar', this)">
+                    <span class="text-xl">📅</span> Calendar
+                </div>
             </div>
         </div>
         <div class="px-2">
@@ -270,6 +273,23 @@
             </div>
         </div>
 
+        <!-- SECTION: CALENDAR -->
+        <div id="section-calendar" class="section">
+            <header class="flex justify-between items-center mb-10">
+                <h2 class="text-3xl font-black">Calendar</h2>
+                <button onclick="document.getElementById('event-modal').classList.remove('hidden')"
+                    class="btn-ghost px-6 py-2 rounded-xl text-xs font-black uppercase">New Event</button>
+            </header>
+
+            <div class="glass p-8 rounded-3xl min-h-[500px]">
+                <div id="calendar-events-list" class="space-y-4">
+                    <div class="text-center py-20 opacity-30">
+                        <p class="font-bold uppercase tracking-widest">Syncing Schedule...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Modal for Clips -->
@@ -285,6 +305,48 @@
         </div>
     </div>
 
+    <!-- Modal for New Event -->
+    <div id="event-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4">
+        <div class="glass max-w-lg w-full rounded-3xl p-8 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">New Event</h3>
+                <button onclick="document.getElementById('event-modal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-white font-black text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Title</label>
+                    <input type="text" id="evt-title"
+                        class="w-full bg-black/50 border border-white/10 p-3 rounded-xl focus:border-indigo-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Date</label>
+                        <input type="date" id="evt-date"
+                            class="w-full bg-black/50 border border-white/10 p-3 rounded-xl focus:border-indigo-500 outline-none date-picker-dark">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Time</label>
+                        <input type="time" id="evt-time"
+                            class="w-full bg-black/50 border border-white/10 p-3 rounded-xl focus:border-indigo-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Type</label>
+                    <select id="evt-type"
+                        class="w-full bg-black/50 border border-white/10 p-3 rounded-xl focus:border-indigo-500 outline-none">
+                        <option value="MEETING">Meeting</option>
+                        <option value="RECORDING">Recording Session</option>
+                        <option value="VIRAL_DROP">Viral Video Drop</option>
+                    </select>
+                </div>
+                <button onclick="submitEvent()"
+                    class="w-full accent-gradient py-3 rounded-xl font-bold mt-4 hover:opacity-90 transition-all">Create
+                    Event</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
 
@@ -295,6 +357,7 @@
             el.classList.add('active');
 
             if (id === 'section-whatsapp') loadWhatsAppMessages();
+            if (id === 'section-calendar') loadCalendarEvents();
         }
 
         function logActivity(msg, type = 'info') {
@@ -341,32 +404,54 @@
 
                 list.innerHTML = assets.map(asset => {
                     const step = asset.pipeline_step || 0;
-                    const stepName = stepNames[step] || (asset.status === 'READY' ? 'Complete' : 'Pending');
+                    const stepName = stepNames[step] || (asset.status === 'READY' ? 'Complete' : (asset.status === 'FAILED' ? 'Failed' : 'Pending'));
 
-                    let progressHtml = '';
+                    // Determine Status Color
+                    let statusColor = 'text-indigo-400';
+                    if (asset.status === 'FAILED') statusColor = 'text-red-500';
+                    if (asset.status === 'READY') statusColor = 'text-green-500';
+
+                    let progressHtml = '<div class="flex gap-1 mt-2 w-full">';
                     for (let i = 1; i <= 5; i++) {
                         let color = 'bg-gray-800';
-                        if (i < step) color = 'bg-green-500';
-                        else if (i === step) color = 'bg-yellow-500 animate-pulse';
-                        progressHtml += `<div class="w-1.5 h-1.5 rounded-full ${color}"></div>`;
+                        let labelColor = 'text-gray-600';
+
+                        if (asset.status === 'FAILED' && i === step) {
+                            color = 'bg-red-500'; // Failed step
+                            labelColor = 'text-red-500';
+                        } else if (i < step || asset.status === 'READY') {
+                            color = 'bg-green-500';
+                            labelColor = 'text-green-500';
+                        } else if (i === step) {
+                            color = 'bg-yellow-500 animate-pulse';
+                            labelColor = 'text-yellow-500';
+                        }
+
+                        // Tooltip for step name
+                        progressHtml += `
+                            <div class="flex-1 flex flex-col gap-1 group/bar">
+                                <div class="h-1.5 rounded-full ${color} w-full transition-all"></div>
+                                <span class="text-[8px] font-bold uppercase ${labelColor} opacity-0 group-hover/bar:opacity-100 transition-opacity text-center">${stepNames[i]}</span>
+                            </div>`;
                     }
+                    progressHtml += '</div>';
 
                     return `
-                    <div class="glass p-6 rounded-3xl flex items-center justify-between hover:bg-white/5 transition-all group">
-                        <div class="flex items-center gap-5">
-                            <div class="w-12 h-12 rounded-xl accent-gradient flex items-center justify-center font-black">
+                    <div class="glass p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between hover:bg-white/5 transition-all group gap-4">
+                        <div class="flex items-center gap-5 w-full">
+                            <div class="w-12 h-12 rounded-xl accent-gradient flex items-center justify-center font-black shrink-0 text-white">
                                 ${asset.title.charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                                <h3 class="font-bold truncate w-40 md:w-64">${asset.title}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p class="text-[9px] text-gray-400 uppercase font-black">ID: #${asset.id} | ${asset.status}</p>
-                                    <div class="flex gap-1">${progressHtml}</div>
-                                    <span class="text-[9px] text-indigo-400 font-bold uppercase">${stepName}</span>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold truncate text-lg">${asset.title}</h3>
+                                <div class="flex items-center gap-2 mt-1 mb-1">
+                                    <p class="text-[10px] text-gray-400 uppercase font-black">ID: #${asset.id} | <span class="${statusColor}">${asset.status}</span></p>
+                                    <span class="text-[10px] ${statusColor} font-bold uppercase ml-2">${stepName}</span>
                                 </div>
+                                ${progressHtml}
                             </div>
                         </div>
-                        <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-black">VIEW CLIPS</button>
+                        <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-black whitespace-nowrap">VIEW CLIPS</button>
                     </div>
                 `;
                 }).join('');
@@ -464,6 +549,19 @@
             try {
                 const res = await fetch(`${API_BASE}/assets/${id}`);
                 const data = await res.json();
+
+                if (data.status === 'FAILED' || data.error_message) {
+                    content.innerHTML = `
+                        <div class="col-span-full py-10 text-center">
+                            <p class="text-red-500 font-black uppercase tracking-widest text-xl mb-4">PIPELINE FAILURE</p>
+                            <div class="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl text-left font-mono text-xs text-red-200 overflow-x-auto whitespace-pre-wrap">
+                                ${data.error_message || "Unknown error occurred during processing."}
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
                 if (!data.clips || data.clips.length === 0) {
                     content.innerHTML = '<div class="col-span-full py-40 text-center text-gray-500 font-black uppercase tracking-widest">No clips forged yet. Check status.</div>';
                     return;
@@ -479,10 +577,67 @@
                         <p class="text-[10px] text-gray-500 font-black text-center uppercase tracking-widest">${Math.round(clip.duration)} Seconds</p>
                     </div>
                 `).join('');
-            } catch (e) { }
+            } catch (e) {
+                content.innerHTML = `<div class="col-span-full py-40 text-center text-red-500 font-black uppercase tracking-widest">System Error: ${e.message}</div>`;
+            }
         }
 
         function closeModal() { document.getElementById('clip-modal').classList.add('hidden'); }
+
+        async function loadCalendarEvents() {
+            const list = document.getElementById('calendar-events-list');
+            list.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Syncing Schedule...</div>';
+            try {
+                const res = await fetch(`${API_BASE}/calendar/events`);
+                const events = await res.json();
+                if (events.length === 0) {
+                    list.innerHTML = '<div class="text-center py-20 opacity-30 font-bold uppercase tracking-widest">Calendar Empty</div>';
+                    return;
+                }
+                list.innerHTML = events.map(e => `
+                    <div class="glass p-4 rounded-2xl flex items-center justify-between border-l-4 ${e.type === 'VIRAL_DROP' ? 'border-red-500' : (e.type === 'RECORDING' ? 'border-purple-500' : 'border-indigo-500')}">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h4 class="font-bold text-lg">${e.title}</h4>
+                                <span class="bg-white/10 text-[10px] font-black px-2 py-0.5 rounded uppercase">${e.type}</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">${e.time}</p>
+                        </div>
+                        <div class="opacity-50 text-2xl">
+                            ${e.type === 'VIRAL_DROP' ? '🔥' : (e.type === 'RECORDING' ? '🎙️' : '📅')}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                list.innerHTML = '<div class="text-center py-20 text-red-500 font-bold">Failed to load calendar</div>';
+            }
+        }
+
+        async function submitEvent() {
+            const title = document.getElementById('evt-title').value;
+            const date = document.getElementById('evt-date').value;
+            const time = document.getElementById('evt-time').value;
+            const type = document.getElementById('evt-type').value;
+
+            if (!title || !date || !time) return alert("Please fill all fields");
+
+            const isoDate = new Date(`${date}T${time}`).toISOString();
+
+            try {
+                const res = await fetch(`${API_BASE}/calendar/events`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, start_time: isoDate, event_type: type })
+                });
+                if (res.ok) {
+                    document.getElementById('event-modal').classList.add('hidden');
+                    loadCalendarEvents();
+                    logActivity(`New Event Scheduled: ${title}`, 'success');
+                } else {
+                    alert('Failed to create event');
+                }
+            } catch (e) { alert(e.message); }
+        }
 
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');

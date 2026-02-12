@@ -25,9 +25,9 @@ class CaptionAgent:
             f"Tone: {tone} (Haryanvi Style)\n"
             "Generate 3 variants of social media captions:\n"
             "1. Instagram Reel (Hinglish + Emojis + Haryanvi Slang)\n"
-            "2. YouTube Shorts (Bold title + Hashtags)\n"
-            "3. Haryanvi lyrics focus.\n"
-            "Return JSON only: { 'ig': '...', 'yt': '...', 'lyrics': '...' }"
+            "2. Facebook Video (Engaging Story + Question + Link in Bio)\n"
+            "3. YouTube Shorts (Bold Loop Hook + Trending Hashtags)\n"
+            "Return JSON only: { 'ig': '...', 'fb': '...', 'yt': '...' }"
         )
 
         try:

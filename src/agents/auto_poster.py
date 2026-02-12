@@ -419,39 +419,164 @@ class AutoPoster:
             logger.error(f"Unexpected error uploading video bytes: {str(e)}", exc_info=True)
             return ""
 
-    def post_clip(self, video_url: str, caption: str, title: str, platforms: list) -> list:
+    def post_to_instagram_photo(self, image_url: str, caption: str) -> dict:
         """
-        Post a clip to multiple platforms.
+        Post a photo to Instagram Feed.
+        """
+        if not self.instagram_access_token or not self.instagram_user_id:
+            return {"status": "SKIPPED", "message": "Instagram credentials missing"}
 
-        Args:
-            video_url: URL of the video to upload
-            caption: Caption for the post (used for Instagram)
-            title: Title of the video (used for YouTube)
-            platforms: List of platforms to post to (e.g., ["INSTAGRAM", "YOUTUBE"])
+        try:
+            logger.info(f"Starting Instagram Photo upload: {image_url}")
+            # Step 1: Create Container
+            url = f"https://graph.facebook.com/v18.0/{self.instagram_user_id}/media"
+            payload = {
+                "image_url": image_url,
+                "caption": caption,
+                "access_token": self.instagram_access_token
+            }
+            res = requests.post(url, json=payload, timeout=30)
+            res.raise_for_status()
+            creation_id = res.json().get("id")
 
-        Returns:
-            list: List of result dictionaries for each platform
+            # Step 2: Publish
+            if not creation_id: return {"status": "ERROR", "message": "No creation ID"}
+            
+            # Instagram requires waiting for media to be 'READY' usually only for video, but safer to check or just publish for image.
+            # Images are usually ready immediately.
+            
+            pub_url = f"https://graph.facebook.com/v18.0/{self.instagram_user_id}/media_publish"
+            pub_payload = {"creation_id": creation_id, "access_token": self.instagram_access_token}
+            pub_res = requests.post(pub_url, json=pub_payload, timeout=30)
+            pub_res.raise_for_status()
+            
+            return {"post_id": pub_res.json().get("id"), "platform": "INSTAGRAM", "status": "POSTED"}
+        except Exception as e:
+            return {"status": "ERROR", "message": str(e)}
+
+    def post_to_facebook_photo(self, image_url: str, caption: str) -> dict:
+        """
+        Post a photo to Facebook Page. Supports local file path or URL.
+        """
+        fb_token = settings.facebook_access_token or self.instagram_access_token
+        target_id = settings.facebook_page_id
+        
+        if not fb_token: return {"status": "SKIPPED", "message": "No FB Token"}
+        if not target_id: return {"status": "SKIPPED", "message": "No FB Page ID"}
+        
+        url = f"https://graph.facebook.com/v18.0/{target_id}/photos"
+        try:
+            params = {
+                "caption": caption,
+                "access_token": fb_token
+            }
+            
+            if os.path.exists(image_url):
+                # Upload local file
+                logger.info(f"Uploading local photo to FB: {image_url}")
+                with open(image_url, 'rb') as f:
+                    # 'source' is the field for file upload
+                    res = requests.post(url, data=params, files={'source': f}, timeout=60)
+            else:
+                # Use URL
+                logger.info(f"Posting photo URL to FB: {image_url}")
+                params["url"] = image_url
+                res = requests.post(url, params=params, timeout=45)
+
+            res.raise_for_status()
+            return {"post_id": res.json().get("id"), "platform": "FACEBOOK", "status": "POSTED"}
+        except Exception as e:
+            return {"status": "ERROR", "message": str(e)}
+
+    def post_image(self, image_url: str, platforms: list, caption: str) -> list:
+        """
+        Post an image to multiple platforms.
         """
         results = []
+        logger.info(f"Starting multi-platform image post to: {', '.join(platforms)}")
+
+        for platform in platforms:
+            p_upper = platform.upper()
+            if p_upper == "INSTAGRAM":
+                res = self.post_to_instagram_photo(image_url, caption)
+            elif p_upper == "FACEBOOK":
+                res = self.post_to_facebook_photo(image_url, caption)
+            else:
+                res = {"status": "SKIPPED", "message": f"Platform {platform} not supported for images"}
+            
+            if 'platform' not in res: res['platform'] = p_upper
+            results.append(res)
+        
+        return results
+
+    def post_to_facebook_video(self, video_url: str, caption: str) -> dict:
+        """
+        Post a clip to Facebook Video/Reels.
+        Note: Requires Page Access Token with 'pages_manage_posts' permission.
+        """
+        # Use specific Facebook token if available, else fallback to IG token
+        fb_token = settings.facebook_access_token or self.instagram_access_token
+        if not fb_token:
+            return {"status": "SKIPPED", "message": "Facebook/Meta credentials missing"}
+
+        # Use Configured Page ID
+        target_id = settings.facebook_page_id
+        if not target_id:
+             logger.warning("Facebook Page ID missing in settings. Simulating post.")
+             return {"post_id": "simulated_fb_id_123", "platform": "FACEBOOK", "status": "SKIPPED", "message": "FACEBOOK_PAGE_ID missing"}
+        
+        endpoint = f"https://graph.facebook.com/v18.0/{target_id}/videos"
+        try:
+            logger.info(f"Posting to Facebook Page: {target_id}")
+            payload = {
+                "file_url": video_url,
+                "description": caption,
+                "access_token": fb_token
+            }
+            
+            # Real API Request
+            resp = requests.post(endpoint, json=payload, timeout=60)
+            resp.raise_for_status()
+            data = resp.json()
+            logger.info(f"Facebook post successful: {data.get('id')}")
+            return {"post_id": data.get("id"), "platform": "FACEBOOK", "status": "POSTED"}
+
+        except Exception as e:
+            logger.error(f"Facebook Post Failed: {e}")
+            return {"status": "ERROR", "message": f"Facebook Post Failed: {e}"}
+
+    def post_clip(self, video_url: str, platforms: list, captions: dict = None, title: str = None) -> list:
+        """
+        Post a clip to multiple platforms with specific captions.
+        """
+        results = []
+        if captions is None: captions = {}
+        
+        # Fallback values
+        defaults = {
+            'ig': captions.get('ig') or title or "New Video",
+            'yt': captions.get('yt') or title or "New Video",
+            'fb': captions.get('fb') or captions.get('ig') or "Check this out!"
+        }
+
         logger.info(f"Starting multi-platform post to: {', '.join(platforms)}")
 
         for platform in platforms:
-            platform_upper = platform.upper()
-            logger.debug(f"Processing platform: {platform_upper}")
+            p_upper = platform.upper()
+            logger.debug(f"Processing platform: {p_upper}")
 
-            if platform_upper == "INSTAGRAM":
-                result = self.post_to_instagram_reels(video_url, caption)
-                results.append(result)
-            elif platform_upper == "YOUTUBE":
-                result = self.post_to_youtube_shorts(video_url, title, caption)
-                results.append(result)
+            if p_upper == "INSTAGRAM":
+                res = self.post_to_instagram_reels(video_url, defaults['ig'])
+            elif p_upper == "YOUTUBE":
+                res = self.post_to_youtube_shorts(video_url, defaults['yt'], defaults['yt'])
+            elif p_upper == "FACEBOOK":
+                res = self.post_to_facebook_video(video_url, defaults['fb'])
             else:
-                logger.warning(f"Unknown platform: {platform}, skipping")
-                results.append({
-                    "status": "SKIPPED",
-                    "platform": platform_upper,
-                    "message": f"Unknown platform: {platform}"
-                })
+                logger.warning(f"Unknown platform: {platform}")
+                res = {"status": "SKIPPED", "message": "Unknown platform"}
+            
+            if 'platform' not in res: res['platform'] = p_upper
+            results.append(res)
 
         logger.info(f"Multi-platform post completed with {len(results)} results")
         return results
