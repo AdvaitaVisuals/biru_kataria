@@ -11,3 +11,4 @@ redis
 python-multipart
 alembic
 httpx
+fastmcp
