@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models import ContentAsset, Clip
 from src.enums import ContentStatus, ContentType, Platform
-from src.schemas import AssetUploadResponse, AssetStatusResponse, ProcessResponse, ClipResponse, YouTubeUploadRequest
+from src.schemas import (
+    AssetUploadResponse, AssetStatusResponse, ProcessResponse, 
+    ClipResponse, YouTubeUploadRequest, YouTubeSummaryRequest, YouTubeSummaryResponse
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +118,21 @@ async def upload_youtube(
         file_path="CLOUD",
         message="YouTube link received. AI is downloading and processing in background.",
     )
+
+@router.post("/youtube/summary", response_model=YouTubeSummaryResponse)
+async def get_youtube_summary(req: YouTubeSummaryRequest):
+    """
+    Summarize a YouTube video using the RapidAPI MCP logic.
+    """
+    from src.agents.youtube_summary_mcp import call_summarizer_api
+    
+    try:
+        summary = await call_summarizer_api(req.url)
+        return YouTubeSummaryResponse(summary=summary)
+    except Exception as e:
+        logger.error(f"Summary failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/{asset_id}/process", response_model=ProcessResponse)
 async def process_asset_endpoint(asset_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

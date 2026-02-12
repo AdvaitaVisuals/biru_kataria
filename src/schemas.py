@@ -83,6 +83,15 @@ class YouTubeUploadRequest(BaseModel):
     url: str
     title: Optional[str] = None
 
+class YouTubeSummaryRequest(BaseModel):
+    """Request to summarize a YouTube video."""
+    url: str
+
+class YouTubeSummaryResponse(BaseModel):
+    """Response containing the YouTube video summary."""
+    summary: str
+    status: str = "success"
+
 class StrategyResponse(BaseModel):
     """Response from the Strategy Brain."""
     asset_id: int

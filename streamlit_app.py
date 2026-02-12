@@ -54,7 +54,7 @@ with st.sidebar:
 # ============================================================
 st.title("Main Studio Hub 🧬")
 
-t_ingest, t_library = st.tabs(["📲 Ingest Content", "🎥 Viral Library"])
+t_ingest, t_library, t_summarizer = st.tabs(["📲 Ingest Content", "🎥 Viral Library", "🧠 AI Summarizer"])
 
 with t_ingest:
     c1, c2 = st.columns(2)
@@ -71,6 +71,24 @@ with t_ingest:
         if yt_url and st.button("Download & Process Link"):
             resp = requests.post(f"{API_BASE}/assets/youtube", json={"url": yt_url})
             if resp.status_code == 201: st.success("AI has taken control of the link.")
+
+with t_summarizer:
+    st.subheader("📝 YouTube AI Summarizer")
+    st.write("Extract wisdom from any YouTube video in seconds.")
+    
+    sum_url = st.text_input("YouTube URL for Summary", key="sum_url")
+    if sum_url and st.button("Generate AI Summary"):
+        with st.spinner("Biru Bhai is watching the video... 🚬"):
+            try:
+                resp = requests.post(f"{API_BASE}/assets/youtube/summary", json={"url": sum_url})
+                if resp.status_code == 200:
+                    summary_text = resp.json().get("summary", "No summary found.")
+                    st.markdown("### 📥 Viral Summary")
+                    st.markdown(summary_text)
+                else:
+                    st.error(f"Error: {resp.text}")
+            except Exception as e:
+                st.error(f"Technical glitch: {e}")
 
 with t_library:
     assets = get_assets()

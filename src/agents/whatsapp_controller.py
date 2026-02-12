@@ -17,37 +17,60 @@ class WhatsAppController:
     def __init__(self):
         self.brain = OpenAIBrain()
     
-    def handle_incoming(self, sender: str, text: str):
+    async def handle_incoming(self, sender: str, text: str):
         cmd = text.strip().lower()
         
         # 1. Handle YouTube Links
         if "youtube.com" in cmd or "youtu.be" in cmd:
-            self._handle_yt_link(sender, text.strip())
+            if "summarize" in cmd or "summary" in cmd:
+                await self._handle_yt_summary(sender, text.strip())
+            else:
+                await self._handle_yt_link(sender, text.strip())
             return
 
         # 2. Handle System Commands
         if cmd == "status":
-            send_whatsapp_message(sender, "🟢 *BIRU_BHAI Status*\nProcessing: Active\nIntelligence: GPT-4o Brain Engaged")
-        elif cmd == "report":
-            send_whatsapp_message(sender, "📊 Last week: 5 Reels posted, +12% Engagement. AI is optimizing next batch.")
-        elif "viral reel" in cmd:
-            send_whatsapp_message(sender, "🎬 Bulk processing mode? Send the link, Bhai. I'm ready.")
+            send_whatsapp_message(sender, "🟢 *BIRU_BHAI Status*\nProcessing: Active\nIntelligence: GPT-4o Brain Engaged\nTools: YouTube Summarizer & Viral Cutter Active")
+        elif cmd == "help":
+            send_whatsapp_message(sender, "👊 *Biru Bhai is here!*\n\n1. Send YT link -> Viral clips start.\n2. Send YT link + 'summarize' -> Get wisdom fast.\n3. Type 'status' -> Check the system.\n4. Just talk to me, Bhai. I'm listening.")
         else:
             # 3. AI CHAT: If not a command, let Biru Bhai's brain answer
+            # This is the 'LLM interaction' requested
             response = self.brain.chat_response(text)
             send_whatsapp_message(sender, response)
 
-    def handle_audio(self, sender: str, file_path: str):
+    async def _handle_yt_summary(self, sender: str, text: str):
+        """Extracts URL and gets summary via MCP logic."""
+        import re
+        urls = re.findall(r'(https?://[^\s]+)', text)
+        if not urls:
+            send_whatsapp_message(sender, "❌ Bhai, link toh bhej summarize karne ke liye!")
+            return
+            
+        url = urls[0]
+        send_whatsapp_message(sender, "🚬 Biru Bhai is watching the video... Sahi cheez nikal ke deta hoon, rukiye.")
+        
+        from src.agents.youtube_summary_mcp import call_summarizer_api
+        
+        try:
+            summary = await call_summarizer_api(url)
+            send_whatsapp_message(sender, f"📝 *Bhai, ye rahi summary:*\n\n{summary}")
+        except Exception as e:
+            logger.error(f"WA Summary Failed: {e}")
+            send_whatsapp_message(sender, "❌ Summary nikalne mein thoda locha ho gaya. Baad mein try kar.")
+
+
+    async def handle_audio(self, sender: str, file_path: str):
         """Transcribes audio and processes it as text."""
         send_whatsapp_message(sender, "🎧 Sun raha hoon, Bhai... (Transcribing)")
         text = self.brain.transcribe_audio(file_path)
         if text:
             send_whatsapp_message(sender, f"📝 *Bhai, tune bola:* \"{text}\"")
-            self.handle_incoming(sender, text)
+            await self.handle_incoming(sender, text)
         else:
             send_whatsapp_message(sender, "❌ Kuch sunai nahi diya, Bhai. Dubara bol.")
 
-    def _handle_yt_link(self, sender: str, url: str):
+    async def _handle_yt_link(self, sender: str, url: str):
         db = SessionLocal()
         try:
             asset = ContentAsset(

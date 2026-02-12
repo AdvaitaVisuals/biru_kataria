@@ -72,7 +72,11 @@ async def receive_webhook(request: Request):
             from_num = msg["from"]
             logger.info(f"Incoming WhatsApp message from: {from_num}")
             
-            if settings.admin_number and from_num != settings.admin_number:
+            # Format numbers for comparison (remove + and any non-numeric chars)
+            clean_from = "".join(filter(str.isdigit, from_num))
+            clean_admin = "".join(filter(str.isdigit, settings.admin_number))
+
+            if settings.admin_number and clean_from != clean_admin:
                 logger.warning(f"Ignoring message from unauthorized number: {from_num}. Admin is {settings.admin_number}")
                 return {"status": "ignored"}
             
@@ -80,12 +84,12 @@ async def receive_webhook(request: Request):
             controller = WhatsAppController()
 
             if msg["type"] == "text":
-                controller.handle_incoming(from_num, msg["text"]["body"])
+                await controller.handle_incoming(from_num, msg["text"]["body"])
             elif msg["type"] == "audio":
                 media_id = msg["audio"]["id"]
                 file_path = download_whatsapp_media(media_id)
                 if file_path:
-                    controller.handle_audio(from_num, file_path)
+                    await controller.handle_audio(from_num, file_path)
                     
     except Exception as e:
         logger.error(f"Webhook processing error: {e}")
