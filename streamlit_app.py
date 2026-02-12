@@ -122,6 +122,49 @@ def render_pipeline_steps(steps):
         else:
             st.markdown(f"<div class='premium-card'>{icon} <span class='step-pending'>Step {num}: {name} — Pending</span></div>", unsafe_allow_html=True)
 
+def render_asset_card(a):
+    """Render a rich information card for a content asset."""
+    status = a.get('status', 'PENDING')
+    step = a.get('pipeline_step', 0)
+    step_name = STEP_NAMES.get(step, "Initializing")
+    
+    # Progress visualization (colored icons)
+    progress_html = ""
+    for i in range(1, 6):
+        if i < step: color = "#22c55e" # Done
+        elif i == step: color = "#f59e0b" # Running
+        else: color = "#475569" # Pending
+        progress_html += f"<span style='color:{color}; margin-right:5px'>{STEP_ICONS.get(i, '⚪')}</span>"
+
+    # Metadata extraction
+    meta = a.get('meta_data', {})
+    if isinstance(meta, str):
+        try: meta = json.loads(meta)
+        except: meta = {}
+    
+    duration = meta.get('duration_string') or meta.get('duration') or "N/A"
+    
+    html = f"""
+    <div class="premium-card">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center;">
+                <div style="background: linear-gradient(135deg, #818cf8, #6366f1); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 1rem; font-weight: 700; font-size: 1.2rem;">
+                    {a['title'][0] if a.get('title') else 'B'}
+                </div>
+                <div>
+                    <h4 style="margin:0; font-weight:700;">{a.get('title', 'Untitiled')}</h4>
+                    <small style="color:#94a3b8">ID: #{a['id']} | {status} | Step {step}: {step_name}</small><br>
+                    <div style="margin-top: 5px;">{progress_html}</div>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <small style="color:#64748b">Duration: {duration}</small>
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
 
 # ============================================================
 # ROUTING LOGIC
@@ -147,7 +190,7 @@ if nav == "🏠 Dashboard":
     if assets:
         st.subheader("Recent Projects")
         for a in assets[:5]:
-            st.markdown(f"<div class='premium-card'><b>{a['title']}</b> | Status: {a['status']}</div>", unsafe_allow_html=True)
+            render_asset_card(a)
 
 elif nav == "🚀 Pipeline":
     st.markdown("<h1 class='gradient-text'>Content Pipeline</h1>", unsafe_allow_html=True)
@@ -251,9 +294,8 @@ elif nav == "🚀 Pipeline":
     st.subheader("Past Pipelines")
     assets = api_get("/assets") or []
     for a in assets[:10]:
+        render_asset_card(a)
         col1, col2 = st.columns([4, 1])
-        with col1:
-            st.write(f"**{a['title']}** — {a['status']}")
         with col2:
             if st.button("View", key=f"view_{a['id']}"):
                 st.session_state["pipeline_asset_id"] = a['id']
