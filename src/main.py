@@ -11,6 +11,7 @@ Phase 2: Intelligence Layer Active
 
 import logging
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -66,21 +67,13 @@ for d in ["media", "media/uploads", "media/clips", "media/frames", "media/poster
 app.mount("/media", StaticFiles(directory=os.path.join(base_dir, "media")), name="media")
 
 
-@app.get("/", tags=["System"])
+@app.get("/", response_class=HTMLResponse, tags=["System"])
 def read_root():
-    return {
-        "name": "BIRU_BHAI",
-        "tagline": "Autonomous Personal Content OS",
-        "status": "🟢 Active",
-        "phase": "Phase 2: Intelligence Layer",
-        "endpoints": {
-            "upload": "POST /assets/upload",
-            "process": "POST /assets/{id}/process",
-            "status": "GET /assets/{id}",
-            "list": "GET /assets",
-            "docs": "GET /docs",
-        },
-    }
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
+    if not os.path.exists(template_path):
+        return "Dashboard template not found. Please upload src/templates/index.html"
+    with open(template_path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
