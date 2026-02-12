@@ -20,8 +20,7 @@ class VizardAgent:
         Submits a video URL to Vizard AI for automated clipping.
         """
         if not self.api_key:
-            logger.error("Vizard API Key missing")
-            return None
+            raise Exception("Vizard API Key missing in environment variables.")
 
         endpoint = f"{self.BASE_URL}/project/create"
         headers = {
@@ -32,21 +31,27 @@ class VizardAgent:
         payload = {
             "videoUrl": video_url,
             "projectName": project_name,
-            "lang": "en", # Vizard auto-detects, but 'en' or 'hi' can be tipped
-            "preferLength": 30 # Seconds
+            "lang": "en", 
+            "preferLength": 30 
         }
 
         try:
             response = requests.post(endpoint, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
+            if response.status_code != 200:
+                error_body = response.text
+                logger.error(f"Vizard API Error ({response.status_code}): {error_body}")
+                raise Exception(f"Vizard API Error: {error_body}")
+                
             data = response.json()
-            # Expecting something like {"data": {"projectId": "..."}}
             project_id = data.get("data", {}).get("projectId")
+            if not project_id:
+                raise Exception(f"Vizard response missing projectId. Full Data: {data}")
+                
             logger.info(f"Vizard project created: {project_id}")
             return project_id
         except Exception as e:
             logger.error(f"Vizard project creation failed: {e}")
-            return None
+            raise
 
     def get_clips(self, project_id: str):
         """
@@ -58,10 +63,14 @@ class VizardAgent:
 
         try:
             response = requests.get(endpoint, headers=headers, params=params, timeout=30)
-            response.raise_for_status()
+            if response.status_code != 200:
+                logger.error(f"Vizard Get Clips Error ({response.status_code}): {response.text}")
+                return []
+            
             data = response.json()
-            # Returns a list of viral clips with scores and URLs
-            return data.get("data", {}).get("list", [])
+            # Vizard status codes: 0 = OK, etc.
+            clips_list = data.get("data", {}).get("list", [])
+            return clips_list
         except Exception as e:
             logger.error(f"Failed to fetch clips from Vizard: {e}")
             return []

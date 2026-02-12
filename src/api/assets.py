@@ -181,4 +181,12 @@ async def get_asset(asset_id: int, db: Session = Depends(get_db)):
 @router.get("", response_model=list[AssetStatusResponse])
 async def list_assets(db: Session = Depends(get_db)):
     assets = db.query(ContentAsset).order_by(ContentAsset.created_at.desc()).all()
-    return [AssetStatusResponse(id=a.id, title=a.title, status=a.status.value) for a in assets]
+    # Return full data so UI can show error_message, created_at etc.
+    return [AssetStatusResponse(
+        id=a.id, 
+        title=a.title, 
+        status=a.status.value if hasattr(a.status, 'value') else a.status,
+        error_message=a.error_message,
+        created_at=a.created_at,
+        updated_at=a.updated_at
+    ) for a in assets]
