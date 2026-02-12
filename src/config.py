@@ -36,5 +36,10 @@ class Settings(BaseSettings):
         # However, to be extra safe and avoid 'extra_forbidden' issues, 
         # we can explicitly allow extras or list everything.
         extra = "ignore" 
+        fields = {
+            'admin_number': {'env': ['ADMIN_NUMBER', 'Phone_Number']},
+            'whatsapp_token': {'env': ['WHATSAPP_TOKEN', 'WhatsApp_Token']},
+            'openai_api_key': {'env': ['OPENAI_API_KEY', 'Gemini_API']} # Mapping to OpenAI as fallback
+        }
 
 settings = Settings()
