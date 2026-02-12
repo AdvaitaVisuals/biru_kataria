@@ -10,7 +10,7 @@ from src.schemas import WhatsAppMessageResponse
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 
-GRAPH_API_URL = "https://graph.facebook.com/v21.0"
+GRAPH_API_URL = "https://graph.facebook.com/v18.0"
 
 def send_whatsapp_message(to_number: str, message_body: str):
     if not settings.whatsapp_token or not settings.phone_id: 
@@ -26,9 +26,9 @@ def send_whatsapp_message(to_number: str, message_body: str):
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=10)
         if resp.status_code != 200:
-            logger.error(f"WhatsApp API Error: {resp.status_code} - {resp.text}")
+            logger.error(f"WhatsApp API Error: Status {resp.status_code}, Body: {resp.text}")
         else:
-            logger.info(f"Message sent successfully to {to_number}")
+            logger.info(f"Message sent successfully to {clean_to}")
         return resp
     except Exception as e:
         logger.error(f"Technical failure sending WhatsApp: {e}")
