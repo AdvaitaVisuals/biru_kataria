@@ -34,18 +34,56 @@ async def verify_webhook(request: Request):
     logger.warning(f"Webhook verification failed. Token mismatch: {token} != {settings.verify_token}")
     return Response(content="Verification failed", status_code=403)
 
+def download_whatsapp_media(media_id: str) -> str:
+    """Downloads media from WhatsApp and returns the local file path."""
+    if not settings.whatsapp_token: return ""
+    
+    headers = {"Authorization": f"Bearer {settings.whatsapp_token}"}
+    try:
+        # Get Media URL
+        res = requests.get(f"{GRAPH_API_URL}/{media_id}", headers=headers, timeout=10)
+        res.raise_for_status()
+        url = res.json().get("url")
+        if not url: return ""
+
+        # Download file
+        res = requests.get(url, headers=headers, timeout=30)
+        res.raise_for_status()
+        
+        # Save to /tmp
+        import os
+        os.makedirs("/tmp/media", exist_ok=True)
+        file_path = f"/tmp/media/{media_id}.ogg"
+        with open(file_path, "wb") as f:
+            f.write(res.content)
+        return file_path
+    except Exception as e:
+        logger.error(f"Media Download Failed: {e}")
+        return ""
+
 @router.post("/webhook")
 async def receive_webhook(request: Request):
     body = await request.json()
     try:
-        messages = body["entry"][0]["changes"][0]["value"].get("messages", [])
+        value = body["entry"][0]["changes"][0]["value"]
+        messages = value.get("messages", [])
         if messages:
             msg = messages[0]
             from_num = msg["from"]
             if settings.admin_number and from_num != settings.admin_number: return {"status": "ignored"}
             
+            from src.agents.whatsapp_controller import WhatsAppController
+            controller = WhatsAppController()
+
             if msg["type"] == "text":
-                from src.agents.whatsapp_controller import WhatsAppController
-                WhatsAppController().handle_incoming(from_num, msg["text"]["body"])
-    except Exception: pass
+                controller.handle_incoming(from_num, msg["text"]["body"])
+            elif msg["type"] == "audio":
+                media_id = msg["audio"]["id"]
+                file_path = download_whatsapp_media(media_id)
+                if file_path:
+                    controller.handle_audio(from_num, file_path)
+                    
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}")
+        
     return {"status": "ok"}
