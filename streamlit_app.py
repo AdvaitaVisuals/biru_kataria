@@ -109,11 +109,16 @@ with st.sidebar:
     )
     
     st.divider()
-    health = api_get("/health")
-    if health:
-        st.success("🟢 System Online")
-    else:
-        st.error("🔴 Backend Disconnected")
+    try:
+        health = requests.get(f"{API_BASE}/health", timeout=2).json()
+        if health:
+            st.success("🟢 System Online")
+        else:
+            st.error("🔴 Backend Disconnected")
+    except:
+        st.error("🔴 Connection Failed")
+        if st.button("Retry Link"):
+            st.rerun()
 
 # ============================================================
 # ROUTING LOGIC

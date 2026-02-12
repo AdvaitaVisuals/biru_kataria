@@ -38,23 +38,25 @@ async def list_whatsapp_messages(db: Session = Depends(get_db)):
 
 @router.get("/test-msg")
 async def test_whatsapp_message():
+    def mask(s): return f"{s[:4]}...{s[-4:]}" if len(s) > 8 else "SET" if s else "NOT SET"
+    
     diag = {
-        "admin_number": bool(settings.admin_number),
-        "whatsapp_token": bool(settings.whatsapp_token),
-        "phone_id": bool(settings.phone_id),
-        "target": settings.admin_number
+        "admin_number": settings.admin_number,
+        "token_masked": mask(settings.whatsapp_token),
+        "phone_id_masked": mask(settings.phone_id),
+        "phone_id_actual": settings.phone_id
     }
     
     if not settings.whatsapp_token or not settings.phone_id:
-        return {"status": "Configuration Error", "missing": [k for k, v in diag.items() if not v]}
+        return {"status": "Config Missing in Vercel", "diag": diag}
         
     if not settings.admin_number:
-        return {"status": "Error", "message": "ADMIN_NUMBER not set"}
+        return {"status": "Error", "message": "ADMIN_NUMBER (Bhai's Phone) is missing in Vercel Settings"}
         
     try:
         resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Check*\n\nBhai, testing message dispatched!")
         if resp is None:
-            return {"status": "Technical Error", "details": "Function returned None (Check logs for exceptions)"}
+            return {"status": "Technical Error", "details": "Function returned None"}
         return {
             "status_code": resp.status_code,
             "api_response": resp.json() if resp.status_code == 200 else resp.text,
