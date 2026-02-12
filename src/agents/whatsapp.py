@@ -38,16 +38,30 @@ async def list_whatsapp_messages(db: Session = Depends(get_db)):
 
 @router.get("/test-msg")
 async def test_whatsapp_message():
-    if not settings.admin_number:
-        return {"error": "ADMIN_NUMBER not set"}
-    resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Check*\n\nBhai, testing message dispatched!")
-    if resp is None:
-        return {"status": "Technical Error", "details": "Check logs"}
-    return {
-        "status_code": resp.status_code,
-        "api_response": resp.json() if resp.status_code == 200 else resp.text,
+    diag = {
+        "admin_number": bool(settings.admin_number),
+        "whatsapp_token": bool(settings.whatsapp_token),
+        "phone_id": bool(settings.phone_id),
         "target": settings.admin_number
     }
+    
+    if not settings.whatsapp_token or not settings.phone_id:
+        return {"status": "Configuration Error", "missing": [k for k, v in diag.items() if not v]}
+        
+    if not settings.admin_number:
+        return {"status": "Error", "message": "ADMIN_NUMBER not set"}
+        
+    try:
+        resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Check*\n\nBhai, testing message dispatched!")
+        if resp is None:
+            return {"status": "Technical Error", "details": "Function returned None (Check logs for exceptions)"}
+        return {
+            "status_code": resp.status_code,
+            "api_response": resp.json() if resp.status_code == 200 else resp.text,
+            "diag": diag
+        }
+    except Exception as e:
+        return {"status": "Exception", "error": str(e)}
 
 from fastapi.responses import PlainTextResponse
 
