@@ -141,6 +141,29 @@ async def get_asset(asset_id: int, db: Session = Depends(get_db)):
 @router.get("", response_model=list[AssetStatusResponse])
 async def list_assets(db: Session = Depends(get_db)):
     assets = db.query(ContentAsset).order_by(ContentAsset.created_at.desc()).all()
+
+    # Zombie Check: Self-heal assets stuck in PROCESSING for > 2 minutes
+    now = datetime.now(timezone.utc)
+    updated = False
+    for a in assets:
+        if a.status == ContentStatus.PROCESSING or a.pipeline_step_status == "RUNNING":
+            last_active = a.updated_at or a.created_at
+            if last_active:
+                # Handle timezone awareness (SQLite usually naive UTC)
+                if last_active.tzinfo is None:
+                     last_active = last_active.replace(tzinfo=timezone.utc)
+                
+                delta = now - last_active
+                if delta.total_seconds() > 120: # 2 minutes timeout
+                    logger.warning(f"Detected Zombie Asset {a.id}. Auto-failing.")
+                    a.status = ContentStatus.FAILED
+                    a.error_message = "Timeout: Process took too long (Serverless Limit)"
+                    a.pipeline_step_status = "FAILED"
+                    updated = True
+    
+    if updated:
+        db.commit()
+
     return [AssetStatusResponse(
         id=a.id,
         title=a.title,
