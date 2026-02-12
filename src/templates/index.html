@@ -4,52 +4,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIRU BHAI | Redirecting...</title>
-    <meta http-equiv="refresh" content="3;url=https://biru-bhai-studio.streamlit.app">
+    <title>BIRU BHAI | Mission Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body {
-            background: #0b0f19;
             font-family: 'Outfit', sans-serif;
+            background: #05070a;
+            color: white;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
             margin: 0;
-            color: white;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 3rem;
+            border-radius: 2rem;
+            width: 100%;
+            max-width: 500px;
             text-align: center;
         }
 
-        .loader {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #1e293b;
-            border-top: 5px solid #6366f1;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+        .btn-premium {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            display: block;
+            margin-bottom: 1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: 0.3s;
+            color: white;
+            text-decoration: none;
         }
 
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
+        .btn-premium:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
 
-            100% {
-                transform: rotate(360deg);
-            }
+        .btn-outline {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            display: block;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #94a3b8;
+            transition: 0.3s;
+            text-decoration: none;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
         }
     </style>
 </head>
 
 <body>
-    <div>
-        <div class="loader"></div>
-        <h1 class="text-3xl font-black tracking-tighter mb-2">BIRU BHAI<span class="text-indigo-500">.</span></h1>
-        <p class="text-gray-400 text-sm uppercase tracking-widest font-bold">Redirecting to Premium UI...</p>
-        <p class="text-xs text-gray-600 mt-4">If not redirected, <a href="https://biru-bhai-studio.streamlit.app"
-                class="text-indigo-400 underline">click here</a>.</p>
+    <div class="glass">
+        <h1 class="text-4xl font-black tracking-tighter mb-2">BIRU BHAI<span class="text-indigo-500">.</span></h1>
+        <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-8">System Mission Control</p>
+
+        <div class="space-y-4">
+            <a href="https://biru-bhai-studio.streamlit.app" target="_blank" class="btn-premium">🚀 Launch Studio</a>
+            <a href="/docs" target="_blank" class="btn-outline">🔍 API Documentation</a>
+        </div>
+
+        <p class="mt-8 text-[10px] text-gray-600 uppercase font-black tracking-tighter">
+            WhatsApp Agent: <span class="text-green-500">ONLINE</span> | Content Engine: <span
+                class="text-indigo-400">READY</span>
+        </p>
     </div>
 </body>
 
