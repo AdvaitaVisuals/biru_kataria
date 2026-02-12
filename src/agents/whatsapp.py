@@ -79,23 +79,33 @@ def download_whatsapp_media(media_id: str) -> str:
         logger.error(f"Media Download Failed: {e}")
         return ""
 
+@router.get("/ping")
+async def whatsapp_ping():
+    return {
+        "status": "online",
+        "admin_set": bool(settings.admin_number),
+        "phone_id": settings.phone_id[:4] + "...",
+        "token_len": len(settings.whatsapp_token)
+    }
+
 @router.post("/webhook")
 async def receive_webhook(request: Request):
     body = await request.json()
+    logger.info(f"Incoming Webhook Body: {body}")
     try:
         value = body["entry"][0]["changes"][0]["value"]
         messages = value.get("messages", [])
         if messages:
             msg = messages[0]
             from_num = msg["from"]
-            logger.info(f"Incoming WhatsApp message from: {from_num}")
             
-            # Format numbers for comparison (remove + and any non-numeric chars)
             clean_from = "".join(filter(str.isdigit, from_num))
             clean_admin = "".join(filter(str.isdigit, settings.admin_number))
+            
+            logger.info(f"WA Message from {clean_from}. Admin is {clean_admin}")
 
             if settings.admin_number and clean_from != clean_admin:
-                logger.warning(f"Ignoring message from unauthorized number: {from_num}. Admin is {settings.admin_number}")
+                logger.warning("Ignoring message: Number mismatch")
                 return {"status": "ignored"}
             
             from src.agents.whatsapp_controller import WhatsAppController
