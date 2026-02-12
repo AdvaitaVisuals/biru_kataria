@@ -1,7 +1,6 @@
 
 import logging
 from datetime import datetime
-from src.workers.tasks import process_youtube_asset
 from src.agents.whatsapp import send_whatsapp_message
 from src.database import SessionLocal
 from src.models import ContentAsset, WhatsAppMessage
@@ -112,9 +111,12 @@ class WhatsAppController:
             db.commit()
             db.refresh(asset)
             
-            # Dispatch to Celery
-            process_youtube_asset.delay(asset.id)
-            response = f"🚀 *AI Pipeline Started!* ID: {asset.id}\nI'm extracting clips now. View it here: https://biru-kataria.vercel.app"
+            # Transition to new 5-step pipeline tracking
+            asset.pipeline_step = 1
+            asset.pipeline_step_status = "PENDING"
+            db.commit()
+
+            response = f"🚀 *AI Pipeline Initialized!* ID: {asset.id}\nI'm extracting clips now. Bhai, Dashboard pe jaake progress dekho: https://biru-kataria.vercel.app"
             send_whatsapp_message(sender, response)
             return response
         except Exception as e:
