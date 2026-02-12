@@ -12,3 +12,4 @@ python-multipart
 alembic
 httpx
 fastmcp
+yt-dlp

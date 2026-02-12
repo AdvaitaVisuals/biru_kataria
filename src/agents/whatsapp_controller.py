@@ -43,9 +43,6 @@ class WhatsAppController:
                 response_text = await self._handle_yt_link(sender, text.strip())
         
         # 2. Handle System Commands
-        elif cmd == "status":
-            response_text = "🟢 *BIRU_BHAI Status*\nProcessing: Active\nIntelligence: GPT-4o Brain Engaged\nTools: YouTube Summarizer & Viral Cutter Active"
-            send_whatsapp_message(sender, response_text)
         elif cmd == "help":
             response_text = "👊 *Biru Bhai is here!*\n\n1. Send YT link -> Viral clips start.\n2. Send YT link + 'summarize' -> Get wisdom fast.\n3. Type 'status' -> Check the system.\n4. Just talk to me, Bhai. I'm listening."
             send_whatsapp_message(sender, response_text)
