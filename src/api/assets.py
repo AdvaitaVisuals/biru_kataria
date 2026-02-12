@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/assets", tags=["Assets"])
 
 # Media upload directory
-MEDIA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "media")
+BASE_PATH = "/tmp" if os.environ.get("VERCEL") else os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+MEDIA_DIR = os.path.join(BASE_PATH, "media")
 UPLOADS_DIR = os.path.join(MEDIA_DIR, "uploads")
 
 def _ensure_dirs():
