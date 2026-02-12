@@ -72,7 +72,9 @@ def download_whatsapp_media(media_id: str) -> str:
 
 @router.post("/webhook")
 async def receive_webhook(request: Request):
+    logger.info(f"Incoming Webhook Header: {dict(request.headers)}")
     body = await request.json()
+    logger.info(f"Incoming Webhook Body: {body}")
     try:
         value = body["entry"][0]["changes"][0]["value"]
         messages = value.get("messages", [])
