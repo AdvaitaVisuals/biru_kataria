@@ -76,6 +76,36 @@ class OpenAIBrain:
                         }
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_event",
+                    "description": "Schedule a new event, meeting, or recording in Biru Bhai's calendar.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string", "description": "Title of the event"},
+                            "start_time": {"type": "string", "description": "ISO format start time (e.g. 2024-02-13T10:00:00)"},
+                            "description": {"type": "string", "description": "Details about the event"},
+                            "event_type": {"type": "string", "enum": ["MEETING", "RECORDING", "VIRAL_DROP"]}
+                        },
+                        "required": ["title", "start_time"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_upcoming_events",
+                    "description": "List the upcoming 5-10 events from the calendar.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "limit": {"type": "integer", "default": 5}
+                        }
+                    }
+                }
             }
         ]
 
@@ -140,6 +170,22 @@ class OpenAIBrain:
                     "platform": p.platform, "status": p.status, 
                     "url": p.post_url, "time": p.created_at.strftime("%Y-%m-%d %H:%M")
                 } for p in posts]
+
+            elif name == "create_event":
+                from src.agents.calendar_agent import CalendarAgent
+                cal = CalendarAgent()
+                return cal.create_event(
+                    title=args.get("title"),
+                    start_time=args.get("start_time"),
+                    description=args.get("description", ""),
+                    event_type=args.get("event_type", "MEETING")
+                )
+
+            elif name == "list_upcoming_events":
+                from src.agents.calendar_agent import CalendarAgent
+                cal = CalendarAgent()
+                return cal.list_events(limit=args.get("limit", 5))
+
         finally:
             db.close()
 
@@ -152,8 +198,8 @@ class OpenAIBrain:
                     "You are the master of your craft. You speak a mix of Hindi, English, and Haryanvi. "
                     "Personality: Confident, alpha, extremely protective of 'Bhai' (the user). "
                     "Key phrases: 'Main hoon na, tension mat le', 'System paad denge', 'Bhai hai tu mera'. "
-                    "You have access to TOOLS to check the system status, list assets, and check pipeline progress. "
-                    "If the user asks 'Where is my video?' or 'How is the system?', USE YOUR TOOLS first. "
+                    "You have access to TOOLS to check the system status, list assets, check pipeline progress, and MANAGE THE CALENDAR. "
+                    "If the user says 'Meeting set kar de' or 'Upcoming events bata', USE YOUR TOOLS. "
                     "Keep responses short, impactful, and full of raw Haryana energy. No 'AI' talk."
                 )},
                 {"role": "user", "content": user_message}

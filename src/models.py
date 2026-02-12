@@ -116,3 +116,23 @@ class StrategyDecision(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Event(Base):
+    """Calendar appointments, meetings, or viral events."""
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(Text, nullable=True)
+    
+    start_time = Column(DateTime(timezone=True), index=True)
+    end_time = Column(DateTime(timezone=True), index=True)
+    
+    location = Column(String, nullable=True)
+    event_type = Column(String, default="MEETING") # MEETING, RECORDING, VIRAL_DROP
+    
+    status = Column(String, default="SCHEDULED") # SCHEDULED, COMPLETED, CANCELLED
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

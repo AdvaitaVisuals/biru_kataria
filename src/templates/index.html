@@ -335,7 +335,23 @@
 
                 const list = document.getElementById('assets-list');
                 if (assets.length === 0) return;
-                list.innerHTML = assets.map(asset => `
+
+                const stepIcons = { 1: "📥", 2: "🎙️", 3: "🧠", 4: "✂️", 5: "📤" };
+                const stepNames = { 1: "Fetch", 2: "Transcribe", 3: "Analyze", 4: "Clip", 5: "Post" };
+
+                list.innerHTML = assets.map(asset => {
+                    const step = asset.pipeline_step || 0;
+                    const stepName = stepNames[step] || (asset.status === 'READY' ? 'Complete' : 'Pending');
+
+                    let progressHtml = '';
+                    for (let i = 1; i <= 5; i++) {
+                        let color = 'bg-gray-800';
+                        if (i < step) color = 'bg-green-500';
+                        else if (i === step) color = 'bg-yellow-500 animate-pulse';
+                        progressHtml += `<div class="w-1.5 h-1.5 rounded-full ${color}"></div>`;
+                    }
+
+                    return `
                     <div class="glass p-6 rounded-3xl flex items-center justify-between hover:bg-white/5 transition-all group">
                         <div class="flex items-center gap-5">
                             <div class="w-12 h-12 rounded-xl accent-gradient flex items-center justify-center font-black">
@@ -343,20 +359,65 @@
                             </div>
                             <div>
                                 <h3 class="font-bold truncate w-40 md:w-64">${asset.title}</h3>
-                                <p class="text-[10px] text-gray-500 uppercase font-black">ID: #${asset.id} | ${asset.status}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <p class="text-[9px] text-gray-400 uppercase font-black">ID: #${asset.id} | ${asset.status}</p>
+                                    <div class="flex gap-1">${progressHtml}</div>
+                                    <span class="text-[9px] text-indigo-400 font-bold uppercase">${stepName}</span>
+                                </div>
                             </div>
                         </div>
                         <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-black">VIEW CLIPS</button>
                     </div>
-                `).join('');
+                `;
+                }).join('');
 
-                // Update simple pipeline
-                const processing = assets.filter(a => a.status === 'PROCESSING');
+                // Update Detailed Pipeline Visualizer
+                const active = assets.find(a => a.status === 'PENDING' || a.status === 'PROCESSING');
                 const pipe = document.getElementById('pipeline-content');
-                if (processing.length > 0) {
-                    pipe.innerHTML = processing.map(a => `<div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></div><span class="text-xs font-bold">${a.title}</span></div>`).join('');
+                if (active) {
+                    const step = active.pipeline_step || 1;
+                    const status = active.pipeline_step_status || 'PENDING';
+
+                    let stepsHtml = '';
+                    for (let i = 1; i <= 5; i++) {
+                        const isCurrent = (i === step);
+                        const isPast = (i < step);
+                        const opacity = isPast ? 'opacity-100' : (isCurrent ? 'opacity-100' : 'opacity-30');
+                        const icon = stepIcons[i];
+                        const label = stepNames[i];
+                        const color = isPast ? 'text-green-400' : (isCurrent ? 'text-indigo-400' : 'text-gray-500');
+
+                        stepsHtml += `
+                            <div class="flex items-center gap-4 ${opacity}">
+                                <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">${icon}</div>
+                                <div class="flex-1">
+                                    <p class="text-[10px] font-bold ${color} uppercase tracking-tighter">${label}</p>
+                                    ${isCurrent ? `<div class="w-full bg-white/5 h-1 rounded-full mt-1 overflow-hidden"><div class="bg-indigo-500 h-full animate-progress" style="width: 50%"></div></div>` : ''}
+                                </div>
+                                ${isPast ? '<span>✅</span>' : (isCurrent ? '<div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></div>' : '')}
+                            </div>
+                        `;
+                    }
+                    pipe.innerHTML = stepsHtml;
+
+                    // AUTO-ADVANCE LOGIC
+                    if (status === 'PENDING' || status === 'COMPLETED' || (status === 'RUNNING' && Math.random() > 0.8)) {
+                        // Only advance if ready for next or periodically Check
+                        advancePipeline(active.id);
+                    }
                 } else {
-                    pipe.innerHTML = '<p class="text-gray-600 text-xs py-4">All engines clear.</p>';
+                    pipe.innerHTML = '<p class="text-gray-600 text-xs py-4">All engines clear. Awaiting new signal.</p>';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function advancePipeline(id) {
+            try {
+                const res = await fetch(`${API_BASE}/pipeline/${id}/advance`, { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    logActivity(`Pipeline Advance: Step ${data.step_advanced_to} ${data.status}`);
+                    loadAssets();
                 }
             } catch (e) { }
         }
@@ -384,7 +445,7 @@
                             </div>
                             <div class="bg-indigo-500/5 p-3 rounded-xl border border-indigo-500/10">
                                 <p class="text-[9px] text-indigo-400 font-black uppercase mb-1">Biru Bhai Reply</p>
-                                <p class="text-sm text-indigo-100 font-medium">${m.response || '...Processing'}</p>
+                                <div class="text-sm text-indigo-100 font-medium">${m.response ? m.response.replace(/\n/g, '<br>') : '...Processing'}</div>
                             </div>
                         </div>
                     </div>

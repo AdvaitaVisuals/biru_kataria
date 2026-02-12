@@ -108,7 +108,7 @@ async def startup_event():
     # Create DB tables safely
     try:
         from src.database import engine, Base
-        from src.models import ContentAsset, Clip, Post  # ensure models loaded
+        from src.models import ContentAsset, Clip, Post, Event  # ensure models loaded
         Base.metadata.create_all(bind=engine)
         logger.info("Database initialized successfully")
     except Exception as e:
