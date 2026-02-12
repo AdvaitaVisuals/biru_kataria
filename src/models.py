@@ -60,6 +60,15 @@ class Clip(Base):
     posts = relationship("Post", back_populates="clip")
 
 
+class WhatsAppMessage(Base):
+    __tablename__ = "whatsapp_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    sender = Column(String)
+    message = Column(Text)
+    response = Column(Text, nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
 class Post(Base):
     """A scheduled or completed social media post for a clip."""
     __tablename__ = "posts"

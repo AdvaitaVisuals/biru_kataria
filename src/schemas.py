@@ -103,5 +103,15 @@ class HealthResponse(BaseModel):
     version: str = "0.2.0"
     phase: str = "Phase 2 & 3: Intelligence + Strategy"
 
+class WhatsAppMessageResponse(BaseModel):
+    id: int
+    sender: str
+    message: str
+    response: Optional[str] = None
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
 class ErrorResponse(BaseModel):
     detail: str

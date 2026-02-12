@@ -1,8 +1,11 @@
 
 import logging
 import requests
-from fastapi import APIRouter, Request, HTTPException, Response
+from fastapi import APIRouter, Request, HTTPException, Response, Depends
+from sqlalchemy.orm import Session
 from src.config import settings
+from src.database import get_db
+from src.schemas import WhatsAppMessageResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
@@ -17,6 +20,12 @@ def send_whatsapp_message(to_number: str, message_body: str):
     try:
         requests.post(url, headers=headers, json=payload, timeout=10)
     except Exception as e: logger.error(f"Failed to send: {e}")
+
+@router.get("/messages", response_model=list[WhatsAppMessageResponse])
+async def list_whatsapp_messages(db: Session = Depends(get_db)):
+    from src.models import WhatsAppMessage
+    messages = db.query(WhatsAppMessage).order_by(WhatsAppMessage.timestamp.desc()).limit(50).all()
+    return messages
 
 from fastapi.responses import PlainTextResponse
 

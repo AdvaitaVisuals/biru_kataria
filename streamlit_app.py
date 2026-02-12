@@ -54,7 +54,7 @@ with st.sidebar:
 # ============================================================
 st.title("Main Studio Hub 🧬")
 
-t_ingest, t_library, t_summarizer = st.tabs(["📲 Ingest Content", "🎥 Viral Library", "🧠 AI Summarizer"])
+t_ingest, t_library, t_summarizer, t_whatsapp = st.tabs(["📲 Ingest Content", "🎥 Viral Library", "🧠 AI Summarizer", "📱 WhatsApp"])
 
 with t_ingest:
     c1, c2 = st.columns(2)
@@ -71,6 +71,33 @@ with t_ingest:
         if yt_url and st.button("Download & Process Link"):
             resp = requests.post(f"{API_BASE}/assets/youtube", json={"url": yt_url})
             if resp.status_code == 201: st.success("AI has taken control of the link.")
+
+with t_whatsapp:
+    st.subheader("📱 WhatsApp Agent Monitor")
+    st.write("Real-time logs of Biru Bhai's conversations.")
+    
+    if st.button("Refresh Messages"):
+        st.rerun()
+
+    try:
+        resp = requests.get(f"{API_BASE}/whatsapp/messages")
+        if resp.status_code == 200:
+            msgs = resp.json()
+            if not msgs:
+                st.info("No messages received yet. Send a message to Biru Bhai!")
+            for m in msgs:
+                with st.expander(f"💬 From: {m['sender']} | {m['timestamp'][:19]}"):
+                    st.markdown(f"**Bhai Ko Kya Bola:**")
+                    st.info(m['message'])
+                    if m.get('response'):
+                        st.markdown(f"**Biru Bhai Ka Reply:**")
+                        st.success(m['response'])
+                    else:
+                        st.warning("No response logged (System might be processing or personality failed).")
+        else:
+            st.error(f"Failed to fetch messages: {resp.status_code}")
+    except Exception as e:
+        st.error(f"Error connecting to backend: {e}")
 
 with t_summarizer:
     st.subheader("📝 YouTube AI Summarizer")
