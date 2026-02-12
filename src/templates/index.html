@@ -66,6 +66,20 @@
         .animate-pulse-soft {
             animation: pulse-soft 2s infinite;
         }
+
+        .step-active {
+            color: #818cf8;
+            font-weight: 900;
+        }
+
+        .step-done {
+            color: #4ade80;
+            opacity: 1;
+        }
+
+        .step-pending {
+            color: #4b5563;
+        }
     </style>
 </head>
 
@@ -85,10 +99,10 @@
     <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         <!-- Control Panel -->
         <section class="lg:col-span-4 space-y-6">
+            <!-- Upload Panel -->
             <div class="glass p-8 rounded-3xl">
                 <h2 class="text-xl font-bold mb-6">Drop Content</h2>
 
-                <!-- YT Link -->
                 <div class="mb-8">
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">YouTube Video
                         URL</label>
@@ -105,7 +119,6 @@
                     </div>
                 </div>
 
-                <!-- Local Upload -->
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Local Video
                         Upload</label>
@@ -117,16 +130,16 @@
                 </div>
             </div>
 
-            <div class="glass p-6 rounded-3xl">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Pipeline Stats</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-black/30 p-4 rounded-2xl">
-                        <p class="text-2xl font-black" id="total-assets">0</p>
-                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Assets</p>
-                    </div>
-                    <div class="bg-black/30 p-4 rounded-2xl">
-                        <p class="text-2xl font-black text-indigo-400" id="active-tasks">0</p>
-                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Processing</p>
+            <!-- Pipeline Visualizer (NEW COMPONENT) -->
+            <div id="pipeline-visualizer" class="glass p-6 rounded-3xl space-y-4">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center justify-between">
+                    Live Extraction Pipeline
+                    <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded">Real-time</span>
+                </h3>
+
+                <div id="pipeline-content" class="space-y-6 py-4">
+                    <div class="text-center py-8">
+                        <p class="text-gray-600 text-xs font-medium">Ready for deployment. Submit a URL to begin.</p>
                     </div>
                 </div>
             </div>
@@ -135,7 +148,7 @@
             <div class="glass p-6 rounded-3xl h-64 flex flex-col">
                 <h3
                     class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-4 flex items-center justify-between">
-                    Intelligence Log
+                    Neural Logs
                     <span class="flex h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping"></span>
                 </h3>
                 <div id="activity-log"
@@ -149,13 +162,18 @@
         <section class="lg:col-span-8">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-2xl font-black">AI Generated Clips</h2>
-                <button onclick="loadAssets()"
-                    class="text-xs font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-widest">Refresh
-                    Feed</button>
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden md:block">
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Assets</p>
+                        <p class="text-lg font-black" id="total-assets">0</p>
+                    </div>
+                    <button onclick="loadAssets()"
+                        class="accent-gradient px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest">Refresh
+                        Feed</button>
+                </div>
             </div>
 
-            <div id="assets-list" class="space-y-4">
-                <!-- Assets will appear here -->
+            <div id="assets-list" class="space-y-4 pb-20">
                 <div class="glass p-12 rounded-3xl text-center opacity-50 border-dashed border-2">
                     <p class="text-gray-500 font-medium">No assets found. Start the AI Army by uploading a video.</p>
                 </div>
@@ -165,13 +183,15 @@
 
     <!-- Modal for Clips -->
     <div id="clip-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4">
-        <div class="glass max-w-5xl w-full max-h-[90vh] rounded-3xl overflow-hidden flex flex-col">
-            <div class="p-6 border-b border-white/10 flex justify-between items-center">
-                <h3 id="modal-title" class="text-xl font-bold">Clips Detail</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-white">&times; ESC</button>
+        <div class="glass max-w-5xl w-full max-h-[90vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h3 id="modal-title" class="text-xl font-bold underline decoration-indigo-500 underline-offset-8">Clips
+                    Detail</h3>
+                <button onclick="closeModal()"
+                    class="text-gray-400 hover:text-white font-black text-2xl px-4">&times;</button>
             </div>
             <div id="modal-content"
-                class="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-8 custom-scrollbar">
+                class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 custom-scrollbar">
                 <!-- Clips will be injected here -->
             </div>
         </div>
@@ -189,10 +209,11 @@
         }
 
         async function submitYouTube() {
-            const url = document.getElementById('yt-url').value;
+            const urlInput = document.getElementById('yt-url');
+            const url = urlInput.value;
             if (!url) return;
 
-            logActivity(`Initializing YouTube link processing: ${url}`);
+            logActivity(`Processing Link: ${url}`);
             const btn = document.getElementById('yt-btn');
             btn.innerHTML = '...';
 
@@ -204,18 +225,53 @@
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    document.getElementById('yt-url').value = '';
-                    logActivity(`Asset #${data.id} created successfully. Starting Vizard Pipeline...`, 'success');
+                    urlInput.value = '';
+                    logActivity(`Asset #${data.id} registered. Neural Engine engaged.`, 'success');
                     loadAssets();
-                    alert("✅ Link received! AI agents are now working. Refresh after 2-3 minutes.");
                 } else {
                     const err = await res.json();
-                    logActivity(`Failed to initialize: ${err.detail || 'Internal Error'}`, 'error');
+                    logActivity(`Registration Failed: ${err.detail || 'API Internal'}`, 'error');
                 }
             } catch (e) {
-                logActivity(`Connection Error: ${e.message}`, 'error');
+                logActivity(`Connection Interrupt: ${e.message}`, 'error');
             }
             btn.innerHTML = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
+        }
+
+        function updatePipelineVisualizer(processingAssets) {
+            const content = document.getElementById('pipeline-content');
+            if (processingAssets.length === 0) {
+                content.innerHTML = `<div class="text-center py-8"><p class="text-gray-600 text-xs font-medium">No active extraction processes.</p></div>`;
+                return;
+            }
+
+            content.innerHTML = processingAssets.map(asset => {
+                // Mocking sub-steps based on simple logic for visual feedback
+                const steps = [
+                    { name: 'Downloading', status: 'done' },
+                    { name: 'Analyzing', status: 'active' },
+                    { name: 'Cutting Clips', status: 'pending' },
+                    { name: 'AI Captioning', status: 'pending' }
+                ];
+
+                return `
+                <div class="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[11px] font-black text-indigo-400 truncate w-32">${asset.title}</span>
+                        <span class="text-[10px] font-bold text-gray-500">ID #${asset.id}</span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        ${steps.map((s, idx) => `
+                            <div class="flex items-center gap-3">
+                                <div class="w-1.5 h-1.5 rounded-full ${s.status === 'done' ? 'bg-green-500' : (s.status === 'active' ? 'bg-indigo-500 animate-ping' : 'bg-gray-700')}"></div>
+                                <span class="text-[11px] ${s.status === 'active' ? 'step-active' : (s.status === 'done' ? 'step-done font-bold' : 'step-pending')}">${s.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                `;
+            }).join('');
         }
 
         async function loadAssets() {
@@ -224,44 +280,45 @@
                 const assets = await res.json();
 
                 document.getElementById('total-assets').innerText = assets.length;
-                document.getElementById('active-tasks').innerText = assets.filter(a => a.status === 'PROCESSING').length;
+                const processing = assets.filter(a => a.status === 'PROCESSING');
+                updatePipelineVisualizer(processing);
 
                 const list = document.getElementById('assets-list');
                 if (assets.length === 0) return;
 
                 list.innerHTML = assets.map(asset => {
-                    let statusColor = 'bg-indigo-500/20 text-indigo-400 animate-pulse';
-                    if (asset.status === 'READY') statusColor = 'bg-green-500/20 text-green-400';
-                    if (asset.status === 'FAILED') statusColor = 'bg-red-500/20 text-red-400';
+                    let statusColor = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse';
+                    if (asset.status === 'READY') statusColor = 'bg-green-500/10 text-green-400 border border-green-500/20';
+                    if (asset.status === 'FAILED') statusColor = 'bg-red-500/10 text-red-500 border border-red-500/20';
 
                     return `
-                    <div id="asset-${asset.id}" data-status="${asset.status}" class="glass p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between hover:bg-white/5 transition-all group gap-4">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl accent-gradient flex items-center justify-center font-black text-xl shrink-0">
+                    <div id="asset-${asset.id}" class="glass p-5 rounded-3xl flex flex-col md:flex-row md:items-center justify-between hover:bg-white/5 transition-all group gap-4 relative overflow-hidden">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 rounded-2xl accent-gradient flex items-center justify-center font-black text-2xl shrink-0 shadow-lg">
                                 ${asset.title.charAt(0).toUpperCase()}
                             </div>
                             <div class="min-w-0 flex-1">
-                                <h3 class="font-bold text-lg truncate">${asset.title}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-white/10 text-gray-400">
+                                <h3 class="font-black text-lg truncate tracking-tight">${asset.title}</h3>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-white/10 text-gray-400 tracking-tighter">
                                         ID: #${asset.id}
                                     </span>
-                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded ${statusColor}">
+                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded ${statusColor} tracking-tighter">
                                         ${asset.status}
                                     </span>
                                 </div>
-                                ${asset.error_message ? `<p class="text-[11px] text-red-500 mt-2 font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 leading-tight">⚠️ ERROR: ${asset.error_message}</p>` : ''}
+                                ${asset.error_message ? `<p class="text-[11px] text-red-400 mt-2 font-mono bg-red-400/5 p-2 rounded-lg border border-red-400/10">⚠️ ${asset.error_message}</p>` : ''}
                             </div>
                         </div>
-                        <div class="flex gap-2">
-                             <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        <div class="flex md:flex-col gap-2">
+                             <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap bg-white/5">
                                 View Clips
                             </button>
                         </div>
                     </div>
                 `}).join('');
             } catch (e) {
-                console.error("Failed to load assets feed", e);
+                console.error("Feed Update Failed", e);
             }
         }
 
@@ -270,7 +327,7 @@
             const modal = document.getElementById('clip-modal');
             const content = document.getElementById('modal-content');
 
-            content.innerHTML = '<div class="col-span-full py-20 text-center font-bold text-gray-400 uppercase tracking-widest animate-pulse">Syncing with Intelligence Layer...</div>';
+            content.innerHTML = '<div class="col-span-full py-40 text-center font-black text-gray-500 uppercase tracking-[0.3em] animate-pulse">Syncing Intelligence...</div>';
             modal.classList.remove('hidden');
 
             try {
@@ -279,10 +336,11 @@
 
                 if (!data.clips || data.clips.length === 0) {
                     content.innerHTML = `
-                    <div class="col-span-full py-20 text-center space-y-4">
-                        <p class="text-indigo-400 font-bold uppercase tracking-widest">AI is still cutting clips...</p>
-                        <p class="text-xs text-gray-500">Wait for status to become READY. Vizard typically takes 3-5 mins.</p>
-                        <button onclick="viewClips(${id}, '${title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-bold uppercase">Check Again Now</button>
+                    <div class="col-span-full py-20 text-center space-y-6">
+                        <div class="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto animate-bounce text-indigo-400 text-3xl font-black">?</div>
+                        <p class="text-indigo-400 font-black uppercase tracking-[0.2em]">Clips are being forged...</p>
+                        <p class="text-xs text-gray-500 max-w-xs mx-auto">Vizard Engine is analyzing viral potential. This usually takes 5-10 minutes for full accuracy.</p>
+                        <button onclick="viewClips(${id}, '${title}')" class="btn-ghost px-8 py-3 rounded-2xl text-[10px] font-black uppercase border-indigo-500/50 text-indigo-400">Re-Check Pipeline Status</button>
                     </div>`;
                     return;
                 }
@@ -292,25 +350,34 @@
                     try { if (clip.transcription) caption = JSON.parse(clip.transcription); } catch (ex) { }
 
                     return `
-                    <div class="space-y-4">
-                        <div class="aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative group">
+                    <div class="space-y-4 group">
+                        <div class="aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl relative">
                             <video src="${clip.file_path}" controls class="w-full h-full object-cover"></video>
-                        </div>
-                        <div class="bg-white/5 p-4 rounded-2xl">
-                            <div class="flex justify-between items-center mb-4">
-                                <span class="text-xs font-black text-indigo-400 px-2 py-1 bg-indigo-500/10 rounded tracking-widest uppercase">Virality: ${clip.virality_score}/100</span>
-                                <span class="text-xs font-bold text-gray-500">${Math.round(clip.duration)}s</span>
+                            <div class="absolute top-4 left-4">
+                                <span class="bg-indigo-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-xl">SCORE: ${clip.virality_score}</span>
                             </div>
-                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Insta Caption</h4>
-                            <p class="text-sm bg-black/40 p-3 rounded-xl border border-white/5 mb-4">${caption.ig}</p>
+                        </div>
+                        <div class="glass p-5 rounded-[2rem] border-white/5">
+                            <div class="flex justify-between items-center mb-4">
+                               <p class="text-[10px] text-gray-500 font-black uppercase leading-none">Intelligence Pack</p>
+                               <span class="text-xs font-bold text-gray-400">${Math.round(clip.duration)}s</span>
+                            </div>
                             
-                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">YT Title</h4>
-                            <p class="text-sm bg-black/40 p-3 rounded-xl border border-white/5">${caption.yt}</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Viral Caption</h4>
+                                    <p class="text-xs bg-black/40 p-4 rounded-2xl border border-white/5 text-gray-200 font-medium leading-relaxed">${caption.ig}</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">SEO Title</h4>
+                                    <p class="text-xs bg-black/40 p-3 rounded-2xl border border-white/5 text-gray-400 font-bold tracking-tight">${caption.yt}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `}).join('');
             } catch (e) {
-                content.innerHTML = '<div class="col-span-full py-20 text-center text-red-500 font-bold uppercase tracking-widest">Failed to communicate with API</div>';
+                content.innerHTML = '<div class="col-span-full py-40 text-center text-red-500 font-black uppercase tracking-widest italic opacity-50">Neural Link Severed by API.</div>';
             }
         }
 
@@ -318,7 +385,6 @@
             document.getElementById('clip-modal').classList.add('hidden');
         }
 
-        // Drag & Drop for local files
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
 
@@ -332,27 +398,26 @@
             formData.append('file', file);
             formData.append('title', file.name.split('.')[0]);
 
-            logActivity(`Starting upload of ${file.name}...`);
-            dropZone.innerHTML = '<div class="animate-pulse text-indigo-400 font-bold tracking-widest uppercase">Uploading...</div>';
+            logActivity(`Uploading: ${file.name}...`);
+            dropZone.innerHTML = '<div class="animate-pulse text-indigo-400 font-black tracking-widest uppercase">Transmitting...</div>';
 
             try {
                 const res = await fetch(`${API_BASE}/assets/upload`, { method: 'POST', body: formData });
                 if (res.ok) {
                     const data = await res.json();
-                    logActivity(`Uploaded successfully. Asset ID: #${data.id}`, 'success');
+                    logActivity(`Reception Successful. ID: #${data.id}`, 'success');
                     loadAssets();
                 } else {
-                    logActivity(`Upload failed. Check Vercel logs.`, 'error');
+                    logActivity(`Transmission Fault.`, 'error');
                 }
             } catch (e) {
-                logActivity(`Connection Error during upload.`, 'error');
+                logActivity(`Network Drift. Check Logs.`, 'error');
             }
             dropZone.innerHTML = '<div class="text-gray-500 text-sm">Tap to upload or Drag & Drop</div>';
         }
 
-        // Initial Load
         loadAssets();
-        setInterval(loadAssets, 30 * 1000); // Auto refresh feed every 30s
+        setInterval(loadAssets, 30000); // 30s Loop
     </script>
 </body>
 
