@@ -4,421 +4,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIRU BHAI | Solo Creator OS</title>
+    <title>BIRU BHAI | Redirecting...</title>
+    <meta http-equiv="refresh" content="3;url=https://biru-bhai-studio.streamlit.app">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@900&display=swap" rel="stylesheet">
     <style>
         body {
+            background: #0b0f19;
             font-family: 'Outfit', sans-serif;
-            background-color: #050505;
-            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            text-align: center;
         }
 
-        .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #1e293b;
+            border-top: 5px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
         }
 
-        .accent-gradient {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
 
-        .btn-ghost {
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s;
-        }
-
-        .btn-ghost:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: #fff;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        @keyframes pulse-soft {
-
-            0%,
             100% {
-                opacity: 1;
+                transform: rotate(360deg);
             }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .animate-pulse-soft {
-            animation: pulse-soft 2s infinite;
-        }
-
-        .step-active {
-            color: #818cf8;
-            font-weight: 900;
-        }
-
-        .step-done {
-            color: #4ade80;
-            opacity: 1;
-        }
-
-        .step-pending {
-            color: #4b5563;
         }
     </style>
 </head>
 
-<body class="p-4 md:p-8 min-h-screen custom-scrollbar">
-    <!-- Header -->
-    <header class="max-w-6xl mx-auto flex justify-between items-center mb-12">
-        <div>
-            <h1 class="text-4xl font-black tracking-tighter">BIRU BHAI<span class="text-indigo-500">.</span></h1>
-            <p class="text-gray-400 text-sm font-medium uppercase tracking-widest">Solo Creator Intelligence OS</p>
-        </div>
-        <div class="flex items-center gap-4">
-            <span id="health-indicator" class="flex h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
-            <span class="text-xs uppercase font-bold tracking-widest opacity-50">System Live</span>
-        </div>
-    </header>
-
-    <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <!-- Control Panel -->
-        <section class="lg:col-span-4 space-y-6">
-            <!-- Upload Panel -->
-            <div class="glass p-8 rounded-3xl">
-                <h2 class="text-xl font-bold mb-6">Drop Content</h2>
-
-                <div class="mb-8">
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">YouTube Video
-                        URL</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="yt-url" placeholder="https://youtube.com/..."
-                            class="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition-all">
-                        <button onclick="submitYouTube()" id="yt-btn"
-                            class="accent-gradient p-3 rounded-xl hover:scale-105 active:scale-95 transition-all">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Local Video
-                        Upload</label>
-                    <div id="drop-zone"
-                        class="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center cursor-pointer hover:border-indigo-500/50 hover:bg-white/5 transition-all">
-                        <input type="file" id="file-input" class="hidden" accept="video/*">
-                        <div class="text-gray-500 text-sm">Tap to upload or Drag & Drop</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pipeline Visualizer (NEW COMPONENT) -->
-            <div id="pipeline-visualizer" class="glass p-6 rounded-3xl space-y-4">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center justify-between">
-                    Live Extraction Pipeline
-                    <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded">Real-time</span>
-                </h3>
-
-                <div id="pipeline-content" class="space-y-6 py-4">
-                    <div class="text-center py-8">
-                        <p class="text-gray-600 text-xs font-medium">Ready for deployment. Submit a URL to begin.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Intelligence Log (Scrolling Console) -->
-            <div class="glass p-6 rounded-3xl h-64 flex flex-col">
-                <h3
-                    class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-4 flex items-center justify-between">
-                    Neural Logs
-                    <span class="flex h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping"></span>
-                </h3>
-                <div id="activity-log"
-                    class="flex-1 overflow-y-auto text-[10px] font-mono space-y-2 pr-2 custom-scrollbar opacity-70">
-                    <div class="text-gray-500">>> Waiting for brain signals...</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Display Area -->
-        <section class="lg:col-span-8">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-black">AI Generated Clips</h2>
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden md:block">
-                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Assets</p>
-                        <p class="text-lg font-black" id="total-assets">0</p>
-                    </div>
-                    <button onclick="loadAssets()"
-                        class="accent-gradient px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest">Refresh
-                        Feed</button>
-                </div>
-            </div>
-
-            <div id="assets-list" class="space-y-4 pb-20">
-                <div class="glass p-12 rounded-3xl text-center opacity-50 border-dashed border-2">
-                    <p class="text-gray-500 font-medium">No assets found. Start the AI Army by uploading a video.</p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Modal for Clips -->
-    <div id="clip-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4">
-        <div class="glass max-w-5xl w-full max-h-[90vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl">
-            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h3 id="modal-title" class="text-xl font-bold underline decoration-indigo-500 underline-offset-8">Clips
-                    Detail</h3>
-                <button onclick="closeModal()"
-                    class="text-gray-400 hover:text-white font-black text-2xl px-4">&times;</button>
-            </div>
-            <div id="modal-content"
-                class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 custom-scrollbar">
-                <!-- Clips will be injected here -->
-            </div>
-        </div>
+<body>
+    <div>
+        <div class="loader"></div>
+        <h1 class="text-3xl font-black tracking-tighter mb-2">BIRU BHAI<span class="text-indigo-500">.</span></h1>
+        <p class="text-gray-400 text-sm uppercase tracking-widest font-bold">Redirecting to Premium UI...</p>
+        <p class="text-xs text-gray-600 mt-4">If not redirected, <a href="https://biru-bhai-studio.streamlit.app"
+                class="text-indigo-400 underline">click here</a>.</p>
     </div>
-
-    <script>
-        const API_BASE = window.location.origin;
-
-        function logActivity(msg, type = 'info') {
-            const log = document.getElementById('activity-log');
-            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-indigo-300');
-            const time = new Date().toLocaleTimeString([], { hour12: false });
-            log.innerHTML += `<div class="${color} flex gap-2"><span class="text-gray-600 shrink-0">[${time}]</span> <span class="break-all">${msg}</span></div>`;
-            log.scrollTop = log.scrollHeight;
-        }
-
-        async function submitYouTube() {
-            const urlInput = document.getElementById('yt-url');
-            const url = urlInput.value;
-            if (!url) return;
-
-            logActivity(`Processing Link: ${url}`);
-            const btn = document.getElementById('yt-btn');
-            btn.innerHTML = '...';
-
-            try {
-                const res = await fetch(`${API_BASE}/assets/youtube`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url, title: "YT - " + new Date().toLocaleTimeString() })
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    urlInput.value = '';
-                    logActivity(`Asset #${data.id} registered. Neural Engine engaged.`, 'success');
-                    loadAssets();
-                } else {
-                    const err = await res.json();
-                    logActivity(`Registration Failed: ${err.detail || 'API Internal'}`, 'error');
-                }
-            } catch (e) {
-                logActivity(`Connection Interrupt: ${e.message}`, 'error');
-            }
-            btn.innerHTML = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
-        }
-
-        function updatePipelineVisualizer(processingAssets) {
-            const content = document.getElementById('pipeline-content');
-            if (processingAssets.length === 0) {
-                content.innerHTML = `<div class="text-center py-8"><p class="text-gray-600 text-xs font-medium">No active extraction processes.</p></div>`;
-                return;
-            }
-
-            content.innerHTML = processingAssets.map(asset => {
-                // Mocking sub-steps based on simple logic for visual feedback
-                const steps = [
-                    { name: 'Downloading', status: 'done' },
-                    { name: 'Analyzing', status: 'active' },
-                    { name: 'Cutting Clips', status: 'pending' },
-                    { name: 'AI Captioning', status: 'pending' }
-                ];
-
-                return `
-                <div class="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-[11px] font-black text-indigo-400 truncate w-32">${asset.title}</span>
-                        <span class="text-[10px] font-bold text-gray-500">ID #${asset.id}</span>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        ${steps.map((s, idx) => `
-                            <div class="flex items-center gap-3">
-                                <div class="w-1.5 h-1.5 rounded-full ${s.status === 'done' ? 'bg-green-500' : (s.status === 'active' ? 'bg-indigo-500 animate-ping' : 'bg-gray-700')}"></div>
-                                <span class="text-[11px] ${s.status === 'active' ? 'step-active' : (s.status === 'done' ? 'step-done font-bold' : 'step-pending')}">${s.name}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                `;
-            }).join('');
-        }
-
-        async function loadAssets() {
-            try {
-                const res = await fetch(`${API_BASE}/assets`);
-                const assets = await res.json();
-
-                document.getElementById('total-assets').innerText = assets.length;
-                const processing = assets.filter(a => a.status === 'PROCESSING');
-                updatePipelineVisualizer(processing);
-
-                const list = document.getElementById('assets-list');
-                if (assets.length === 0) return;
-
-                list.innerHTML = assets.map(asset => {
-                    let statusColor = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse';
-                    if (asset.status === 'READY') statusColor = 'bg-green-500/10 text-green-400 border border-green-500/20';
-                    if (asset.status === 'FAILED') statusColor = 'bg-red-500/10 text-red-500 border border-red-500/20';
-
-                    return `
-                    <div id="asset-${asset.id}" class="glass p-5 rounded-3xl flex flex-col md:flex-row md:items-center justify-between hover:bg-white/5 transition-all group gap-4 relative overflow-hidden">
-                        <div class="flex items-center gap-5">
-                            <div class="w-14 h-14 rounded-2xl accent-gradient flex items-center justify-center font-black text-2xl shrink-0 shadow-lg">
-                                ${asset.title.charAt(0).toUpperCase()}
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <h3 class="font-black text-lg truncate tracking-tight">${asset.title}</h3>
-                                <div class="flex items-center gap-3 mt-1">
-                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-white/10 text-gray-400 tracking-tighter">
-                                        ID: #${asset.id}
-                                    </span>
-                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded ${statusColor} tracking-tighter">
-                                        ${asset.status}
-                                    </span>
-                                </div>
-                                ${asset.error_message ? `<p class="text-[11px] text-red-400 mt-2 font-mono bg-red-400/5 p-2 rounded-lg border border-red-400/10">⚠️ ${asset.error_message}</p>` : ''}
-                            </div>
-                        </div>
-                        <div class="flex md:flex-col gap-2">
-                             <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap bg-white/5">
-                                View Clips
-                            </button>
-                        </div>
-                    </div>
-                `}).join('');
-            } catch (e) {
-                console.error("Feed Update Failed", e);
-            }
-        }
-
-        async function viewClips(id, title) {
-            document.getElementById('modal-title').innerText = title;
-            const modal = document.getElementById('clip-modal');
-            const content = document.getElementById('modal-content');
-
-            content.innerHTML = '<div class="col-span-full py-40 text-center font-black text-gray-500 uppercase tracking-[0.3em] animate-pulse">Syncing Intelligence...</div>';
-            modal.classList.remove('hidden');
-
-            try {
-                const res = await fetch(`${API_BASE}/assets/${id}`);
-                const data = await res.json();
-
-                if (!data.clips || data.clips.length === 0) {
-                    content.innerHTML = `
-                    <div class="col-span-full py-20 text-center space-y-6">
-                        <div class="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto animate-bounce text-indigo-400 text-3xl font-black">?</div>
-                        <p class="text-indigo-400 font-black uppercase tracking-[0.2em]">Clips are being forged...</p>
-                        <p class="text-xs text-gray-500 max-w-xs mx-auto">Vizard Engine is analyzing viral potential. This usually takes 5-10 minutes for full accuracy.</p>
-                        <button onclick="viewClips(${id}, '${title}')" class="btn-ghost px-8 py-3 rounded-2xl text-[10px] font-black uppercase border-indigo-500/50 text-indigo-400">Re-Check Pipeline Status</button>
-                    </div>`;
-                    return;
-                }
-
-                content.innerHTML = data.clips.map(clip => {
-                    let caption = { ig: "Check it out!", yt: "#Viral" };
-                    try { if (clip.transcription) caption = JSON.parse(clip.transcription); } catch (ex) { }
-
-                    return `
-                    <div class="space-y-4 group">
-                        <div class="aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl relative">
-                            <video src="${clip.file_path}" controls class="w-full h-full object-cover"></video>
-                            <div class="absolute top-4 left-4">
-                                <span class="bg-indigo-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-xl">SCORE: ${clip.virality_score}</span>
-                            </div>
-                        </div>
-                        <div class="glass p-5 rounded-[2rem] border-white/5">
-                            <div class="flex justify-between items-center mb-4">
-                               <p class="text-[10px] text-gray-500 font-black uppercase leading-none">Intelligence Pack</p>
-                               <span class="text-xs font-bold text-gray-400">${Math.round(clip.duration)}s</span>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                <div>
-                                    <h4 class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Viral Caption</h4>
-                                    <p class="text-xs bg-black/40 p-4 rounded-2xl border border-white/5 text-gray-200 font-medium leading-relaxed">${caption.ig}</p>
-                                </div>
-                                <div>
-                                    <h4 class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">SEO Title</h4>
-                                    <p class="text-xs bg-black/40 p-3 rounded-2xl border border-white/5 text-gray-400 font-bold tracking-tight">${caption.yt}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `}).join('');
-            } catch (e) {
-                content.innerHTML = '<div class="col-span-full py-40 text-center text-red-500 font-black uppercase tracking-widest italic opacity-50">Neural Link Severed by API.</div>';
-            }
-        }
-
-        function closeModal() {
-            document.getElementById('clip-modal').classList.add('hidden');
-        }
-
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = (e) => handleUpload(e.target.files[0]);
-
-        async function handleUpload(file) {
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('title', file.name.split('.')[0]);
-
-            logActivity(`Uploading: ${file.name}...`);
-            dropZone.innerHTML = '<div class="animate-pulse text-indigo-400 font-black tracking-widest uppercase">Transmitting...</div>';
-
-            try {
-                const res = await fetch(`${API_BASE}/assets/upload`, { method: 'POST', body: formData });
-                if (res.ok) {
-                    const data = await res.json();
-                    logActivity(`Reception Successful. ID: #${data.id}`, 'success');
-                    loadAssets();
-                } else {
-                    logActivity(`Transmission Fault.`, 'error');
-                }
-            } catch (e) {
-                logActivity(`Network Drift. Check Logs.`, 'error');
-            }
-            dropZone.innerHTML = '<div class="text-gray-500 text-sm">Tap to upload or Drag & Drop</div>';
-        }
-
-        loadAssets();
-        setInterval(loadAssets, 30000); // 30s Loop
-    </script>
 </body>
 
 </html>
