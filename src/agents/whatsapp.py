@@ -32,12 +32,28 @@ def send_whatsapp_message(to_number: str, message_body: str):
 
 @router.get("/test")
 async def manual_test():
-    if not settings.admin_number:
-        return {"error": "ADMIN_NUMBER not set"}
-    resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Test*\n\nBhai, agar ye message mil raha hai toh pipeline ekdum 'Chaka-chak' hai! 🥃")
-    if resp and resp.status_code == 200:
-        return {"status": "Success! Check your WhatsApp.", "to": settings.admin_number}
-    return {"error": "Failed to send", "details": resp.text if resp else "No response"}
+    diag = {
+        "admin_number": settings.admin_number,
+        "has_token": bool(settings.whatsapp_token),
+        "has_phone_id": bool(settings.phone_id),
+        "token_prefix": settings.whatsapp_token[:5] if settings.whatsapp_token else "NONE",
+        "phone_id": settings.phone_id
+    }
+    
+    if not settings.whatsapp_token or not settings.phone_id:
+        return {"error": "Configuration Missing on Server", "diag": diag}
+        
+    try:
+        resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Test*\n\nBhai, agar ye message mil raha hai toh pipeline ekdum 'Chaka-chak' hai! 🥃")
+        if resp is None:
+            return {"error": "Technical Failure (Check Logs)", "diag": diag}
+            
+        if resp.status_code == 200:
+            return {"status": "Success! Check your WhatsApp.", "diag": diag}
+        else:
+            return {"error": f"Meta API Error: {resp.status_code}", "details": resp.text, "diag": diag}
+    except Exception as e:
+        return {"error": "Exception Caught", "message": str(e), "diag": diag}
 
 @router.get("/messages", response_model=list[WhatsAppMessageResponse])
 async def list_whatsapp_messages(db: Session = Depends(get_db)):
