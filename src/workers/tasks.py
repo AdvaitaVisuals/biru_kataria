@@ -26,16 +26,17 @@ def process_vizard_pipeline(asset_id: int):
     """
     NEW VIZARD-ONLY PIPELINE:
     1. Send URL to Vizard AI.
-    2. Poll for Clips.
-    3. Save results.
+    2. Poll for Clips (handled by Lazy Polling in API).
     """
-    db = _get_db()
+    db = SessionLocal()
     vizard = VizardAgent()
-    captioner = CaptionAgent()
     
+    asset = None
     try:
         asset = db.query(ContentAsset).filter(ContentAsset.id == asset_id).first()
-        if not asset: return
+        if not asset: 
+            logger.error(f"Asset {asset_id} not found in DB")
+            return
 
         asset.status = ContentStatus.PROCESSING
         db.commit()
@@ -43,7 +44,6 @@ def process_vizard_pipeline(asset_id: int):
         # Get URL (If local, we'd need to upload, but user prefers YT/Cloud links)
         video_url = asset.source_url
         if "http" not in video_url:
-            # Fallback if it's a local file path (unlikely in Vizard-only mode)
             asset.status = ContentStatus.FAILED
             asset.error_message = "Vizard requires a public URL (YouTube/Cloud). Local files not supported in serverless mode yet."
             db.commit()
@@ -53,13 +53,12 @@ def process_vizard_pipeline(asset_id: int):
         project_id = vizard.create_project(video_url, project_name=asset.title)
         if not project_id:
             asset.status = ContentStatus.FAILED
-            asset.error_message = "Vizard project creation failed."
+            asset.error_message = "Vizard project creation failed. (Check API Key or URL)"
             db.commit()
             return
 
+        if not asset.meta_data: asset.meta_data = {}
         asset.meta_data["vizard_project_id"] = project_id
-        # We don't poll here anymore (Serverless time limit). 
-        # The GET /assets/{id} endpoint will poll lazily.
         db.commit()
         logger.info(f"Vizard project {project_id} initialized for asset {asset_id}")
 

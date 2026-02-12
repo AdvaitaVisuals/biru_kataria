@@ -34,14 +34,42 @@
             border-color: #fff;
         }
 
-        .shimmer {
-            animation: overflow 2s linear infinite;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        @keyframes pulse-soft {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .animate-pulse-soft {
+            animation: pulse-soft 2s infinite;
         }
     </style>
 </head>
 
-<body class="p-4 md:p-8 min-h-screen">
+<body class="p-4 md:p-8 min-h-screen custom-scrollbar">
     <!-- Header -->
     <header class="max-w-6xl mx-auto flex justify-between items-center mb-12">
         <div>
@@ -102,6 +130,19 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Intelligence Log (Scrolling Console) -->
+            <div class="glass p-6 rounded-3xl h-64 flex flex-col">
+                <h3
+                    class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-4 flex items-center justify-between">
+                    Intelligence Log
+                    <span class="flex h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+                </h3>
+                <div id="activity-log"
+                    class="flex-1 overflow-y-auto text-[10px] font-mono space-y-2 pr-2 custom-scrollbar opacity-70">
+                    <div class="text-gray-500">>> Waiting for brain signals...</div>
+                </div>
+            </div>
         </section>
 
         <!-- Display Area -->
@@ -113,7 +154,7 @@
                     Feed</button>
             </div>
 
-            <div id="assets-list" class="space-y-6">
+            <div id="assets-list" class="space-y-4">
                 <!-- Assets will appear here -->
                 <div class="glass p-12 rounded-3xl text-center opacity-50 border-dashed border-2">
                     <p class="text-gray-500 font-medium">No assets found. Start the AI Army by uploading a video.</p>
@@ -129,7 +170,8 @@
                 <h3 id="modal-title" class="text-xl font-bold">Clips Detail</h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-white">&times; ESC</button>
             </div>
-            <div id="modal-content" class="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div id="modal-content"
+                class="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-8 custom-scrollbar">
                 <!-- Clips will be injected here -->
             </div>
         </div>
@@ -138,10 +180,19 @@
     <script>
         const API_BASE = window.location.origin;
 
+        function logActivity(msg, type = 'info') {
+            const log = document.getElementById('activity-log');
+            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-indigo-300');
+            const time = new Date().toLocaleTimeString([], { hour12: false });
+            log.innerHTML += `<div class="${color} flex gap-2"><span class="text-gray-600 shrink-0">[${time}]</span> <span class="break-all">${msg}</span></div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
         async function submitYouTube() {
             const url = document.getElementById('yt-url').value;
             if (!url) return;
 
+            logActivity(`Initializing YouTube link processing: ${url}`);
             const btn = document.getElementById('yt-btn');
             btn.innerHTML = '...';
 
@@ -152,16 +203,17 @@
                     body: JSON.stringify({ url: url, title: "YT - " + new Date().toLocaleTimeString() })
                 });
                 if (res.ok) {
+                    const data = await res.json();
                     document.getElementById('yt-url').value = '';
+                    logActivity(`Asset #${data.id} created successfully. Starting Vizard Pipeline...`, 'success');
                     loadAssets();
-                    alert("✅ AI Army is now downloading. Refresh in a few minutes!");
+                    alert("✅ Link received! AI agents are now working. Refresh after 2-3 minutes.");
                 } else {
                     const err = await res.json();
-                    alert("❌ Error: " + (err.detail || "Upload failed"));
+                    logActivity(`Failed to initialize: ${err.detail || 'Internal Error'}`, 'error');
                 }
             } catch (e) {
-                console.error(e);
-                alert("❌ Connection Error: API is likely sleeping or restarting.");
+                logActivity(`Connection Error: ${e.message}`, 'error');
             }
             btn.innerHTML = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
         }
@@ -177,30 +229,40 @@
                 const list = document.getElementById('assets-list');
                 if (assets.length === 0) return;
 
-                list.innerHTML = assets.map(asset => `
-                    <div class="glass p-6 rounded-3xl flex items-center justify-between hover:bg-white/5 transition-all group">
+                list.innerHTML = assets.map(asset => {
+                    let statusColor = 'bg-indigo-500/20 text-indigo-400 animate-pulse';
+                    if (asset.status === 'READY') statusColor = 'bg-green-500/20 text-green-400';
+                    if (asset.status === 'FAILED') statusColor = 'bg-red-500/20 text-red-400';
+
+                    return `
+                    <div id="asset-${asset.id}" data-status="${asset.status}" class="glass p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between hover:bg-white/5 transition-all group gap-4">
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl accent-gradient flex items-center justify-center font-black text-xl">
+                            <div class="w-12 h-12 rounded-xl accent-gradient flex items-center justify-center font-black text-xl shrink-0">
                                 ${asset.title.charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                                <h3 class="font-bold text-lg">${asset.title}</h3>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="font-bold text-lg truncate">${asset.title}</h3>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-white/10 text-gray-400">
                                         ID: #${asset.id}
                                     </span>
-                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded ${asset.status === 'READY' ? 'bg-green-500/20 text-green-400' : 'bg-indigo-500/20 text-indigo-400 animate-pulse'}">
+                                    <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded ${statusColor}">
                                         ${asset.status}
                                     </span>
                                 </div>
+                                ${asset.error_message ? `<p class="text-[11px] text-red-500 mt-2 font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 leading-tight">⚠️ ERROR: ${asset.error_message}</p>` : ''}
                             </div>
                         </div>
-                        <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest">
-                            View Clips
-                        </button>
+                        <div class="flex gap-2">
+                             <button onclick="viewClips(${asset.id}, '${asset.title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                                View Clips
+                            </button>
+                        </div>
                     </div>
-                `).join('');
-            } catch (e) { console.error(e); }
+                `}).join('');
+            } catch (e) {
+                console.error("Failed to load assets feed", e);
+            }
         }
 
         async function viewClips(id, title) {
@@ -208,30 +270,35 @@
             const modal = document.getElementById('clip-modal');
             const content = document.getElementById('modal-content');
 
-            content.innerHTML = '<div class="col-span-full py-20 animate-pulse text-center font-bold text-gray-500 uppercase tracking-widest">Syncing with Intelligence Layer...</div>';
+            content.innerHTML = '<div class="col-span-full py-20 text-center font-bold text-gray-400 uppercase tracking-widest animate-pulse">Syncing with Intelligence Layer...</div>';
             modal.classList.remove('hidden');
 
             try {
                 const res = await fetch(`${API_BASE}/assets/${id}`);
                 const data = await res.json();
 
-                if (data.clips.length === 0) {
-                    content.innerHTML = '<div class="col-span-full py-20 text-center text-indigo-400 font-bold">AI is still cutting. Refresh in a bit!</div>';
+                if (!data.clips || data.clips.length === 0) {
+                    content.innerHTML = `
+                    <div class="col-span-full py-20 text-center space-y-4">
+                        <p class="text-indigo-400 font-bold uppercase tracking-widest">AI is still cutting clips...</p>
+                        <p class="text-xs text-gray-500">Wait for status to become READY. Vizard typically takes 3-5 mins.</p>
+                        <button onclick="viewClips(${id}, '${title}')" class="btn-ghost px-6 py-2 rounded-xl text-xs font-bold uppercase">Check Again Now</button>
+                    </div>`;
                     return;
                 }
 
                 content.innerHTML = data.clips.map(clip => {
                     let caption = { ig: "Check it out!", yt: "#Viral" };
-                    try { caption = JSON.parse(clip.transcription); } catch (ex) { }
+                    try { if (clip.transcription) caption = JSON.parse(clip.transcription); } catch (ex) { }
 
                     return `
                     <div class="space-y-4">
-                        <div class="aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+                        <div class="aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative group">
                             <video src="${clip.file_path}" controls class="w-full h-full object-cover"></video>
                         </div>
                         <div class="bg-white/5 p-4 rounded-2xl">
                             <div class="flex justify-between items-center mb-4">
-                                <span class="text-xs font-black text-indigo-400 px-2 py-1 bg-indigo-500/10 rounded tracking-widest uppercase">Score: ${clip.virality_score}/100</span>
+                                <span class="text-xs font-black text-indigo-400 px-2 py-1 bg-indigo-500/10 rounded tracking-widest uppercase">Virality: ${clip.virality_score}/100</span>
                                 <span class="text-xs font-bold text-gray-500">${Math.round(clip.duration)}s</span>
                             </div>
                             <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Insta Caption</h4>
@@ -243,7 +310,7 @@
                     </div>
                 `}).join('');
             } catch (e) {
-                content.innerHTML = '<div class="col-span-full py-20 text-center text-red-500 font-bold uppercase tracking-widest">Internal Error Connectivity</div>';
+                content.innerHTML = '<div class="col-span-full py-20 text-center text-red-500 font-bold uppercase tracking-widest">Failed to communicate with API</div>';
             }
         }
 
@@ -265,23 +332,27 @@
             formData.append('file', file);
             formData.append('title', file.name.split('.')[0]);
 
+            logActivity(`Starting upload of ${file.name}...`);
             dropZone.innerHTML = '<div class="animate-pulse text-indigo-400 font-bold tracking-widest uppercase">Uploading...</div>';
 
             try {
-                const res = await fetch(`${API_BASE}/assets/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
+                const res = await fetch(`${API_BASE}/assets/upload`, { method: 'POST', body: formData });
                 if (res.ok) {
+                    const data = await res.json();
+                    logActivity(`Uploaded successfully. Asset ID: #${data.id}`, 'success');
                     loadAssets();
+                } else {
+                    logActivity(`Upload failed. Check Vercel logs.`, 'error');
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                logActivity(`Connection Error during upload.`, 'error');
+            }
             dropZone.innerHTML = '<div class="text-gray-500 text-sm">Tap to upload or Drag & Drop</div>';
         }
 
         // Initial Load
         loadAssets();
-        setInterval(loadAssets, 30000); // Auto refresh feed
+        setInterval(loadAssets, 30 * 1000); // Auto refresh feed every 30s
     </script>
 </body>
 
