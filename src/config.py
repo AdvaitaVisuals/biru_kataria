@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     def get_database_url(self) -> str:
         if self.database_url and self.database_url.startswith("postgres://"):
             return self.database_url.replace("postgres://", "postgresql://", 1)
+        
+        # Fallback for Vercel (Read-only OS)
+        if os.environ.get("VERCEL"):
+            # Put SQLite in /tmp if not using Postgres
+            if not self.database_url or "sqlite" in self.database_url:
+                return "sqlite:////tmp/biru_bhai.db"
+        
         return self.database_url or "sqlite:///biru_bhai.db"
 
     @property
