@@ -13,7 +13,9 @@ router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 GRAPH_API_URL = "https://graph.facebook.com/v18.0"
 
 def send_whatsapp_message(to_number: str, message_body: str):
-    if not settings.whatsapp_token or not settings.phone_id: return
+    if not settings.whatsapp_token or not settings.phone_id: 
+        logger.error("Token or Phone ID missing")
+        return None
     url = f"{GRAPH_API_URL}/{settings.phone_id}/messages"
     headers = {"Authorization": f"Bearer {settings.whatsapp_token}", "Content-Type": "application/json"}
     payload = {"messaging_product": "whatsapp", "to": to_number, "type": "text", "text": {"body": message_body}}
@@ -23,8 +25,10 @@ def send_whatsapp_message(to_number: str, message_body: str):
             logger.error(f"WhatsApp API Error: {resp.status_code} - {resp.text}")
         else:
             logger.info(f"Message sent successfully to {to_number}")
+        return resp
     except Exception as e:
         logger.error(f"Technical failure sending WhatsApp: {e}")
+        return None
 
 @router.get("/messages", response_model=list[WhatsAppMessageResponse])
 async def list_whatsapp_messages(db: Session = Depends(get_db)):
@@ -35,9 +39,15 @@ async def list_whatsapp_messages(db: Session = Depends(get_db)):
 @router.get("/test-msg")
 async def test_whatsapp_message():
     if not settings.admin_number:
-        return {"error": "ADMIN_NUMBER not set in environment"}
-    send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Check*\n\nBhai, agar ye message mil raha hai toh token ekdum sahi hai! System Paad denge!")
-    return {"status": "Test message dispatched to admin", "to": settings.admin_number}
+        return {"error": "ADMIN_NUMBER not set"}
+    resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Check*\n\nBhai, testing message dispatched!")
+    if resp is None:
+        return {"status": "Technical Error", "details": "Check logs"}
+    return {
+        "status_code": resp.status_code,
+        "api_response": resp.json() if resp.status_code == 200 else resp.text,
+        "target": settings.admin_number
+    }
 
 from fastapi.responses import PlainTextResponse
 
