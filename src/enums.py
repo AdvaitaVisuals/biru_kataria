@@ -30,3 +30,22 @@ class Platform(str, Enum):
 class ContentType(str, Enum):
     VIDEO = "VIDEO"
     AUDIO = "AUDIO"
+
+
+class PipelineStep(int, Enum):
+    NOT_STARTED = 0
+    FETCH = 1
+    TRANSCRIBE = 2
+    ANALYZE = 3
+    CLIP = 4
+    CAPTION_POST = 5
+
+
+PIPELINE_STEP_NAMES = {
+    0: "Not Started",
+    1: "Fetch Metadata",
+    2: "Transcribe Audio",
+    3: "AI Analysis",
+    4: "Generate Clips",
+    5: "Caption & Post",
+}

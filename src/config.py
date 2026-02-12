@@ -20,7 +20,14 @@ class Settings(BaseSettings):
     verify_token: str = "bot"
     admin_number: str = ""
     vizard_api_key: str = ""
-    
+
+    # Auto-Posting
+    instagram_access_token: str = ""
+    instagram_business_account_id: str = ""
+    youtube_client_id: str = ""
+    youtube_client_secret: str = ""
+    youtube_refresh_token: str = ""
+
     # Task Queue
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/0"

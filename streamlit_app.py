@@ -2,6 +2,7 @@
 import streamlit as st
 import requests
 import json
+import time
 import os
 from datetime import datetime
 
@@ -15,22 +16,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Premium Glassmorphism Look
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-    /* Global Styles */
     * { font-family: 'Outfit', sans-serif; }
     .main { background: linear-gradient(135deg, #0f172a 0%, #020617 100%); color: #f8fafc; }
-    
-    /* Sidebar Styling */
     [data-testid="stSidebar"] {
         background-color: rgba(15, 23, 42, 0.8) !important;
         backdrop-filter: blur(10px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
-    /* Card Component */
     .premium-card {
         background: rgba(30, 41, 59, 0.5);
         backdrop-filter: blur(12px);
@@ -41,28 +36,23 @@ st.markdown("""
         transition: transform 0.2s ease, border-color 0.2s ease;
     }
     .premium-card:hover { border-color: #38bdf8; transform: translateY(-2px); }
-    
-    /* Gradient Text */
     .gradient-text {
         background: linear-gradient(90deg, #38bdf8, #818cf8);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 700;
     }
-    
-    /* Buttons */
     .stButton>button {
         background: linear-gradient(90deg, #0ea5e9, #6366f1) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 0.5rem 1rem !important;
-        font-weight: 600 !important;
-        transition: opacity 0.2s !important;
+        color: white !important; border: none !important;
+        border-radius: 8px !important; padding: 0.5rem 1rem !important;
+        font-weight: 600 !important; transition: opacity 0.2s !important;
     }
     .stButton>button:hover { opacity: 0.9 !important; }
-
-    /* Custom scrollbar */
+    .step-done { color: #22c55e; font-weight: 600; }
+    .step-running { color: #f59e0b; font-weight: 600; }
+    .step-fail { color: #ef4444; font-weight: 600; }
+    .step-pending { color: #64748b; }
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -72,11 +62,11 @@ st.markdown("""
 # ============================================================
 # UTILITIES
 # ============================================================
-DEFAULT_API_BASE = "https://biru-kataria.vercel.app" 
+DEFAULT_API_BASE = "https://biru-kataria.vercel.app"
 API_BASE = st.sidebar.text_input("Backend API Config", value=DEFAULT_API_BASE)
 
 def api_get(endpoint):
-    try: return requests.get(f"{API_BASE}{endpoint}", timeout=5).json()
+    try: return requests.get(f"{API_BASE}{endpoint}", timeout=15).json()
     except: return None
 
 def api_post(endpoint, json_data=None, files=None):
@@ -88,37 +78,50 @@ def api_post(endpoint, json_data=None, files=None):
 # ============================================================
 with st.sidebar:
     st.markdown("<h1 class='gradient-text'>BIRU_BHAI</h1>", unsafe_allow_html=True)
-    st.caption("Solo Creator OS v1.2.0 • Phase: Active")
-    
+    st.caption("Solo Creator OS v2.0 | 5-Step Pipeline Active")
     st.divider()
-    
     nav = st.radio(
         "CORE MODULES",
-        [
-            "🏠 Dashboard",
-            "📤 Ingest Content",
-            "🎬 Video Clips",
-            "📝 Transcription",
-            "🧠 AI Strategy",
-            "📅 Scheduling",
-            "📊 Audience Insights",
-            "📈 Engagement Analytics",
-            "📱 WhatsApp Agent"
-        ],
+        ["🏠 Dashboard", "🚀 Pipeline", "🎬 Video Clips", "🧠 AI Strategy", "📱 WhatsApp Agent"],
         index=0
     )
-    
     st.divider()
     try:
         health = requests.get(f"{API_BASE}/health", timeout=2).json()
-        if health:
-            st.success("🟢 System Online")
-        else:
-            st.error("🔴 Backend Disconnected")
+        st.success("🟢 System Online") if health else st.error("🔴 Backend Down")
     except:
         st.error("🔴 Connection Failed")
-        if st.button("Retry Link"):
-            st.rerun()
+        if st.button("Retry"): st.rerun()
+
+# ============================================================
+# PIPELINE STEP RENDERER
+# ============================================================
+STEP_ICONS = {1: "📥", 2: "🎙️", 3: "🧠", 4: "✂️", 5: "📤"}
+STEP_NAMES = {1: "Fetch Metadata", 2: "Transcribe Audio", 3: "AI Analysis", 4: "Generate Clips", 5: "Caption & Post"}
+
+def render_pipeline_steps(steps):
+    """Render 5-step pipeline progress."""
+    for s in steps:
+        num = s['step_number']
+        icon = STEP_ICONS.get(num, "⚪")
+        name = s['step_name']
+        status = s['status']
+        summary = s.get('result_summary', '')
+
+        if status == "COMPLETED":
+            st.markdown(f"<div class='premium-card'>{icon} <span class='step-done'>Step {num}: {name} — Done</span><br><small style='color:#94a3b8'>{summary or ''}</small></div>", unsafe_allow_html=True)
+        elif status == "RUNNING":
+            st.markdown(f"<div class='premium-card' style='border-color:#f59e0b'>{icon} <span class='step-running'>Step {num}: {name} — Running...</span></div>", unsafe_allow_html=True)
+        elif status == "POLLING":
+            st.markdown(f"<div class='premium-card' style='border-color:#f59e0b'>{icon} <span class='step-running'>Step {num}: {name} — Waiting for clips...</span></div>", unsafe_allow_html=True)
+        elif status == "FAILED":
+            err = s.get('error_message', 'Unknown error')
+            st.markdown(f"<div class='premium-card' style='border-color:#ef4444'>{icon} <span class='step-fail'>Step {num}: {name} — Failed</span><br><small style='color:#ef4444'>{err}</small></div>", unsafe_allow_html=True)
+        elif status == "SKIPPED":
+            st.markdown(f"<div class='premium-card'>{icon} <span style='color:#94a3b8'>Step {num}: {name} — Skipped</span><br><small style='color:#64748b'>{summary or ''}</small></div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='premium-card'>{icon} <span class='step-pending'>Step {num}: {name} — Pending</span></div>", unsafe_allow_html=True)
+
 
 # ============================================================
 # ROUTING LOGIC
@@ -131,33 +134,132 @@ if nav == "🏠 Dashboard":
     with c2: st.metric("Clips Generated", "148", "+15")
     with c3: st.metric("Engagement Index", "92%", "+4%")
     with c4: st.metric("AI Tokens Used", "4.2M", "Eco-mode")
-    
+
     st.markdown("""
     <div class='premium-card'>
-        <h3>🔥 Trending Strategy</h3>
-        <p>Your Haryana-style persona is resonating with 18-24 demographics. 
-        <b>Strategy Recommendation:</b> Increase split-screen focus in Finance niches.</p>
+        <h3>🔥 Pipeline v2.0 Active</h3>
+        <p>5-Step AI Pipeline: Fetch → Transcribe → Analyze → Clip → Auto Post</p>
     </div>
     """, unsafe_allow_html=True)
 
-elif nav == "📤 Ingest Content":
-    st.markdown("<h1 class='gradient-text'>Content Hybrid Ingest</h1>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("📁 Heavy Upload")
-        up = st.file_uploader("Drop master footage", type=["mp4", "mov"])
-        if up and st.button("Initialize Processing"):
-            with st.spinner("Uploading to Biru Cloud..."):
-                resp = api_post("/assets/upload", files={"file": (up.name, up.getvalue())})
-                if isinstance(resp, requests.Response) and resp.status_code == 201:
-                    st.success("Bhai, uploading done. Agents are working!")
-    with c2:
-        st.subheader("🌐 Remote Link")
-        yt_url = st.text_input("YouTube / Cloud Link")
-        if yt_url and st.button("Fetch & Analyze"):
+    # Show recent assets
+    assets = api_get("/assets") or []
+    if assets:
+        st.subheader("Recent Projects")
+        for a in assets[:5]:
+            st.markdown(f"<div class='premium-card'><b>{a['title']}</b> | Status: {a['status']}</div>", unsafe_allow_html=True)
+
+elif nav == "🚀 Pipeline":
+    st.markdown("<h1 class='gradient-text'>Content Pipeline</h1>", unsafe_allow_html=True)
+
+    # URL Input
+    yt_url = st.text_input("YouTube URL", placeholder="https://www.youtube.com/watch?v=...")
+
+    if yt_url and st.button("Start Pipeline"):
+        with st.spinner("Creating asset..."):
             resp = api_post("/assets/youtube", json_data={"url": yt_url})
             if isinstance(resp, requests.Response) and resp.status_code == 201:
-                st.success("Biru Bhai is fetching the master link. System Paad denge!")
+                data = resp.json()
+                st.session_state["pipeline_asset_id"] = data["id"]
+                st.session_state["pipeline_running"] = True
+                st.success(f"Asset created (ID: {data['id']}). Pipeline starting...")
+                st.rerun()
+            else:
+                st.error(f"Failed to create asset: {resp}")
+
+    # Active Pipeline Monitor
+    if "pipeline_asset_id" in st.session_state:
+        asset_id = st.session_state["pipeline_asset_id"]
+        st.divider()
+        st.subheader(f"Pipeline #{asset_id}")
+
+        # Get current status
+        status = api_get(f"/pipeline/{asset_id}/status")
+        if status:
+            # Show overall status
+            overall = status.get("overall_status", "PENDING")
+            title = status.get("title", "Processing...")
+            st.markdown(f"**{title}** | Status: `{overall}`")
+
+            # Progress bar
+            steps = status.get("steps", [])
+            completed = sum(1 for s in steps if s['status'] in ('COMPLETED', 'SKIPPED'))
+            st.progress(completed / 5, text=f"Step {status.get('current_step', 0)} of 5")
+
+            # Render steps
+            render_pipeline_steps(steps)
+
+            # Auto-advance logic
+            if st.session_state.get("pipeline_running", False):
+                current_step = status.get("current_step", 0)
+                current_step_status = None
+                for s in steps:
+                    if s['step_number'] == current_step:
+                        current_step_status = s['status']
+                        break
+
+                should_advance = (
+                    overall not in ("READY", "FAILED") and
+                    current_step_status in ("PENDING", "COMPLETED", "SKIPPED", "POLLING", None)
+                )
+
+                if should_advance and current_step <= 5:
+                    with st.spinner(f"Running Step {current_step if current_step_status not in ('COMPLETED', 'SKIPPED') else current_step + 1}..."):
+                        advance_resp = api_post(f"/pipeline/{asset_id}/advance")
+                        if isinstance(advance_resp, requests.Response):
+                            if advance_resp.status_code == 200:
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                try:
+                                    err = advance_resp.json().get("detail", "Unknown error")
+                                except:
+                                    err = advance_resp.text
+                                st.error(f"Step failed: {err}")
+                                st.session_state["pipeline_running"] = False
+                        else:
+                            st.error(f"Connection error: {advance_resp}")
+                            st.session_state["pipeline_running"] = False
+
+                elif overall == "READY":
+                    st.session_state["pipeline_running"] = False
+                    st.balloons()
+                    st.success("Pipeline complete! All 5 steps done.")
+
+                elif overall == "FAILED":
+                    st.session_state["pipeline_running"] = False
+
+            # Manual controls
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Retry / Continue"):
+                    st.session_state["pipeline_running"] = True
+                    st.rerun()
+            with col2:
+                if st.button("Refresh Status"):
+                    st.rerun()
+            with col3:
+                if st.button("New Pipeline"):
+                    del st.session_state["pipeline_asset_id"]
+                    st.session_state["pipeline_running"] = False
+                    st.rerun()
+        else:
+            st.error("Could not fetch pipeline status. Backend may be offline.")
+
+    # Show past pipelines
+    st.divider()
+    st.subheader("Past Pipelines")
+    assets = api_get("/assets") or []
+    for a in assets[:10]:
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"**{a['title']}** — {a['status']}")
+        with col2:
+            if st.button("View", key=f"view_{a['id']}"):
+                st.session_state["pipeline_asset_id"] = a['id']
+                st.session_state["pipeline_running"] = False
+                st.rerun()
+
 
 elif nav == "🎬 Video Clips":
     st.markdown("<h1 class='gradient-text'>Viral Library</h1>", unsafe_allow_html=True)
@@ -170,50 +272,34 @@ elif nav == "🎬 Video Clips":
                 detail = api_get(f"/assets/{asset['id']}")
                 if detail and detail.get('clips'):
                     for clip in detail['clips']:
-                        st.markdown(f"<div class='premium-card'>", unsafe_allow_html=True)
+                        st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
                         cc1, cc2 = st.columns([2, 3])
                         with cc1:
-                            if "http" in str(clip['file_path']):
+                            if "http" in str(clip.get('file_path', '')):
                                 st.video(clip['file_path'])
                         with cc2:
-                            st.write(f"**Viral Score: {clip['virality_score']*10:.1f}/10**")
-                            st.write(f"Duration: {clip['duration']}s")
-                            st.button("Post to Reels", key=f"p_{clip['id']}")
+                            st.write(f"**Viral Score: {clip.get('virality_score', 0)*10:.1f}/10**")
+                            st.write(f"Duration: {clip.get('duration', 0)}s")
+                            if clip.get('transcription'):
+                                try:
+                                    caps = json.loads(clip['transcription'])
+                                    st.write(f"IG: {caps.get('ig', 'N/A')}")
+                                    st.write(f"YT: {caps.get('yt', 'N/A')}")
+                                except:
+                                    st.write(f"Caption: {clip['transcription'][:100]}")
                         st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    st.info("No clips generated yet.")
 
-elif nav == "📝 Transcription":
-    st.markdown("<h1 class='gradient-text'>Global Transcription Engine</h1>", unsafe_allow_html=True)
-    st.write("Automatically extracts dialogue and translates to Haryanvi-English mix.")
-    assets = api_get("/assets") or []
-    for asset in assets[:5]:
-        detail = api_get(f"/assets/{asset['id']}")
-        if detail and detail.get('clips'):
-            st.subheader(f"Project: {asset['title']}")
-            for i, clip in enumerate(detail['clips']):
-                st.text_area(f"Clip #{i+1} Transcript", clip.get('transcription', "Processing..."), height=100)
 
 elif nav == "🧠 AI Strategy":
     st.markdown("<h1 class='gradient-text'>Wisdom Extract (AI Summarizer)</h1>", unsafe_allow_html=True)
     sum_url = st.text_input("Enter YouTube URL for instant wisdom")
     if st.button("Generate Strategy"):
-        with st.spinner("Biru Bhai is watching... 🚬"):
+        with st.spinner("Biru Bhai is watching..."):
             resp = api_post("/assets/youtube/summary", json_data={"url": sum_url})
             if isinstance(resp, requests.Response) and resp.status_code == 200:
                 st.markdown(resp.json().get("summary", "No data"))
-
-elif nav == "📂 Scheduling" or nav == "📅 Scheduling":
-    st.markdown("<h1 class='gradient-text'>Content Calendar</h1>", unsafe_allow_html=True)
-    st.info("Agent #9 (Scheduler) is coming soon. Currently managed by Biru Bhai manually.")
-    st.image("https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=1000", caption="Future Roadmap")
-
-elif nav == "📊 Audience Insights":
-    st.markdown("<h1 class='gradient-text'>Deep Demographic Analysis</h1>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class='premium-card'>
-        <h3>👥 Top Audience: Haryana, Delhi, Toronto</h3>
-        <p>Engagement is highest between <b>9 PM - 11 PM IST</b>.</p>
-    </div>
-    """, unsafe_allow_html=True)
 
 elif nav == "📱 WhatsApp Agent":
     st.markdown("<h1 class='gradient-text'>WhatsApp Agent Monitor</h1>", unsafe_allow_html=True)
@@ -229,7 +315,7 @@ elif nav == "📱 WhatsApp Agent":
 
 else:
     st.title(nav)
-    st.write("Module logic initialization in progress...")
+    st.write("Module initialization in progress...")
 
 st.divider()
 st.caption("BIRU_BHAI — The Solo Creator OS | Designed for the 1%ers.")

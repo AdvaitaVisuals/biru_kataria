@@ -115,3 +115,41 @@ class WhatsAppMessageResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+# ============================================================
+# PIPELINE SCHEMAS
+# ============================================================
+
+class PipelineStepDetail(BaseModel):
+    step_number: int
+    step_name: str
+    status: str  # PENDING, RUNNING, COMPLETED, FAILED
+    error_message: Optional[str] = None
+    result_summary: Optional[str] = None
+
+class PipelineStatusResponse(BaseModel):
+    asset_id: int
+    title: str
+    overall_status: str
+    current_step: int
+    current_step_name: str
+    steps: list[PipelineStepDetail]
+    error_message: Optional[str] = None
+
+class PipelineAdvanceResponse(BaseModel):
+    asset_id: int
+    step_advanced_to: int
+    step_name: str
+    status: str
+    message: str
+
+class AutoPostRequest(BaseModel):
+    clip_id: int
+    platforms: list[str]  # ["INSTAGRAM", "YOUTUBE"]
+    caption_override: Optional[str] = None
+
+class AutoPostResponse(BaseModel):
+    post_ids: list[int] = Field(default_factory=list)
+    status: str
+    message: str

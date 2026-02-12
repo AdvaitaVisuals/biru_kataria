@@ -24,6 +24,11 @@ class ContentAsset(Base):
     error_message = Column(Text, nullable=True)  # Why it failed (if it did)
     meta_data = Column(JSON, default={})  # Duration, FPS, Resolution
 
+    # Pipeline Step Tracking
+    pipeline_step = Column(Integer, default=0)
+    pipeline_step_status = Column(String, default="PENDING")
+    pipeline_data = Column(JSON, default={})
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -86,6 +91,10 @@ class Post(Base):
 
     status = Column(SQLEnum(PostStatus), default=PostStatus.SCHEDULED, index=True)
     error_message = Column(Text, nullable=True)
+
+    caption = Column(Text, nullable=True)
+    post_url = Column(String, nullable=True)
+    platform_post_id = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

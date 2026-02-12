@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from src.api.assets import router as assets_router
+from src.api.pipeline import router as pipeline_router
 from src.agents.whatsapp import router as whatsapp_router
 from src.schemas import HealthResponse
 
@@ -56,6 +57,7 @@ app.add_middleware(
 # ROUTES
 # ============================================================
 app.include_router(assets_router)
+app.include_router(pipeline_router)
 app.include_router(whatsapp_router)
 
 # Mount Media for static access (Clips/Uploads)
@@ -106,7 +108,7 @@ async def startup_event():
     # Create DB tables safely
     try:
         from src.database import engine, Base
-        from src.models import ContentAsset, Clip  # ensure models loaded
+        from src.models import ContentAsset, Clip, Post  # ensure models loaded
         Base.metadata.create_all(bind=engine)
         logger.info("Database initialized successfully")
     except Exception as e:
