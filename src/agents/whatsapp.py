@@ -36,35 +36,6 @@ async def list_whatsapp_messages(db: Session = Depends(get_db)):
     messages = db.query(WhatsAppMessage).order_by(WhatsAppMessage.timestamp.desc()).limit(50).all()
     return messages
 
-@router.get("/test-msg")
-async def test_whatsapp_message():
-    def mask(s): return f"{s[:4]}...{s[-4:]}" if len(s) > 8 else "SET" if s else "NOT SET"
-    
-    diag = {
-        "admin_number": settings.admin_number,
-        "token_masked": mask(settings.whatsapp_token),
-        "phone_id_masked": mask(settings.phone_id),
-        "phone_id_actual": settings.phone_id
-    }
-    
-    if not settings.whatsapp_token or not settings.phone_id:
-        return {"status": "Config Missing in Vercel", "diag": diag}
-        
-    if not settings.admin_number:
-        return {"status": "Error", "message": "ADMIN_NUMBER (Bhai's Phone) is missing in Vercel Settings"}
-        
-    try:
-        resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Check*\n\nBhai, testing message dispatched!")
-        if resp is None:
-            return {"status": "Technical Error", "details": "Function returned None"}
-        return {
-            "status_code": resp.status_code,
-            "api_response": resp.json() if resp.status_code == 200 else resp.text,
-            "diag": diag
-        }
-    except Exception as e:
-        return {"status": "Exception", "error": str(e)}
-
 from fastapi.responses import PlainTextResponse
 
 @router.get("/webhook", response_class=PlainTextResponse)
@@ -110,9 +81,7 @@ def download_whatsapp_media(media_id: str) -> str:
 
 @router.post("/webhook")
 async def receive_webhook(request: Request):
-    logger.info(f"Incoming Webhook Header: {dict(request.headers)}")
     body = await request.json()
-    logger.info(f"Incoming Webhook Body: {body}")
     try:
         value = body["entry"][0]["changes"][0]["value"]
         messages = value.get("messages", [])
