@@ -1,9 +1,17 @@
+import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     app_name: str = "BIRU_BHAI"
     environment: str = "development"
     database_url: str = "sqlite:///./biru_bhai.db"
+
+    @property
+    def get_database_url(self) -> str:
+        # Detect Vercel environment
+        if os.environ.get("VERCEL"):
+            return "sqlite:////tmp/biru_bhai.db"
+        return self.database_url
     
     # Credentials from .env
     openai_api_key: str = ""

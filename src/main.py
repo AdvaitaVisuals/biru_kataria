@@ -58,10 +58,12 @@ app.include_router(assets_router)
 app.include_router(whatsapp_router)
 
 # Mount Media for static access (Clips/Uploads)
+base_dir = "/tmp" if os.environ.get("VERCEL") else "."
 for d in ["media", "media/uploads", "media/clips", "media/frames", "media/posters"]:
-    if not os.path.exists(d):
-        os.makedirs(d)
-app.mount("/media", StaticFiles(directory="media"), name="media")
+    full_path = os.path.join(base_dir, d)
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+app.mount("/media", StaticFiles(directory=os.path.join(base_dir, "media")), name="media")
 
 
 @app.get("/", tags=["System"])
