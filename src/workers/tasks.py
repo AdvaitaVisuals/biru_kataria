@@ -11,8 +11,6 @@ from src.models import ContentAsset, Clip
 from src.enums import ContentStatus, ClipStatus
 from src.agents.vizard_agent import VizardAgent
 from src.agents.captioner import CaptionAgent
-from src.agents.frame_power import FramePowerAgent
-from src.utils.youtube import download_youtube_video
 
 logger = logging.getLogger(__name__)
 

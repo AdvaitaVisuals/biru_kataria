@@ -10,8 +10,4 @@ celery
 redis
 python-multipart
 alembic
-streamlit
 httpx
-yt-dlp
-pillow
-opencv-python-headless
