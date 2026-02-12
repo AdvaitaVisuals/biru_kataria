@@ -30,6 +30,15 @@ def send_whatsapp_message(to_number: str, message_body: str):
         logger.error(f"Technical failure sending WhatsApp: {e}")
         return None
 
+@router.get("/test")
+async def manual_test():
+    if not settings.admin_number:
+        return {"error": "ADMIN_NUMBER not set"}
+    resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Test*\n\nBhai, agar ye message mil raha hai toh pipeline ekdum 'Chaka-chak' hai! 🥃")
+    if resp and resp.status_code == 200:
+        return {"status": "Success! Check your WhatsApp.", "to": settings.admin_number}
+    return {"error": "Failed to send", "details": resp.text if resp else "No response"}
+
 @router.get("/messages", response_model=list[WhatsAppMessageResponse])
 async def list_whatsapp_messages(db: Session = Depends(get_db)):
     from src.models import WhatsAppMessage
