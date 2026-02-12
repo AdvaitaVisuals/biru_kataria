@@ -18,14 +18,21 @@ def send_whatsapp_message(to_number: str, message_body: str):
         requests.post(url, headers=headers, json=payload, timeout=10)
     except Exception as e: logger.error(f"Failed to send: {e}")
 
-@router.get("/webhook")
+from fastapi.responses import PlainTextResponse
+
+@router.get("/webhook", response_class=PlainTextResponse)
 async def verify_webhook(request: Request):
-    mode = request.query_params.get("hub.mode")
-    token = request.query_params.get("hub.verify_token")
-    challenge = request.query_params.get("hub.challenge")
+    params = request.query_params
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+    
     if mode == "subscribe" and token == settings.verify_token:
-        return int(challenge)
-    raise HTTPException(status_code=403)
+        logger.info("Webhook verified successfully")
+        return challenge
+    
+    logger.warning(f"Webhook verification failed. Token mismatch: {token} != {settings.verify_token}")
+    return Response(content="Verification failed", status_code=403)
 
 @router.post("/webhook")
 async def receive_webhook(request: Request):
