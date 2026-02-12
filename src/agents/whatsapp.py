@@ -10,24 +10,26 @@ from src.schemas import WhatsAppMessageResponse
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 
-GRAPH_API_URL = "https://graph.facebook.com/v18.0"
+GRAPH_API_URL = "https://graph.facebook.com/v21.0"
 
 def send_whatsapp_message(to_number: str, message_body: str):
-    if not settings.whatsapp_token or not settings.phone_id: 
-        logger.error("Token or Phone ID missing")
+    if not settings.whatsapp_token or not settings.phone_id:
+        logger.error("SEND FAILED: Token or Phone ID missing")
         return None
     url = f"{GRAPH_API_URL}/{settings.phone_id}/messages"
     headers = {"Authorization": f"Bearer {settings.whatsapp_token}", "Content-Type": "application/json"}
     payload = {"messaging_product": "whatsapp", "to": to_number, "type": "text", "text": {"body": message_body}}
+    logger.info(f"Sending WhatsApp message to {to_number} via {url}")
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        logger.info(f"WhatsApp API Response: {resp.status_code} - {resp.text}")
         if resp.status_code != 200:
-            logger.error(f"WhatsApp API Error: {resp.status_code} - {resp.text}")
+            logger.error(f"SEND FAILED: {resp.status_code} - {resp.text}")
         else:
             logger.info(f"Message sent successfully to {to_number}")
         return resp
     except Exception as e:
-        logger.error(f"Technical failure sending WhatsApp: {e}")
+        logger.error(f"SEND FAILED (exception): {e}")
         return None
 
 @router.get("/test")
