@@ -70,7 +70,11 @@ async def receive_webhook(request: Request):
         if messages:
             msg = messages[0]
             from_num = msg["from"]
-            if settings.admin_number and from_num != settings.admin_number: return {"status": "ignored"}
+            logger.info(f"Incoming WhatsApp message from: {from_num}")
+            
+            if settings.admin_number and from_num != settings.admin_number:
+                logger.warning(f"Ignoring message from unauthorized number: {from_num}. Admin is {settings.admin_number}")
+                return {"status": "ignored"}
             
             from src.agents.whatsapp_controller import WhatsAppController
             controller = WhatsAppController()
