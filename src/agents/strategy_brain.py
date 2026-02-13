@@ -32,7 +32,7 @@ class StrategyBrain:
         content = [
             {
                 "type": "text", 
-                "text": f"You are Biru Bhai's Strategy Brain. Analyze this video's frames and transcript. \n\n"
+                "text": f"You are Goga Bhai's Strategy Brain. Analyze this video's frames and transcript. \n\n"
                         f"TRANSCRIPT: {transcription_text}\n\n"
                         f"Identify exactly 10 viral segments of 30 seconds each. \n"
                         f"Focus on visual energy, hook delivery, and high engagement moments. \n"

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class AutoPoster:
-    """Auto-posting agent for BIRU BHAI. Handles posting clips to Instagram Reels and YouTube Shorts."""
+    """Auto-posting agent for GOGA BHAI. Handles posting clips to Instagram Reels and YouTube Shorts."""
 
     def __init__(self):
         """Initialize with settings from src.config."""

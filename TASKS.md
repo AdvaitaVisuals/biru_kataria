@@ -1,4 +1,4 @@
-# BIRU_BHAI Tasks
+# GOGA_BHAI Tasks
 
 ## Phase 1: Foundation & Infrastructure (Current)
 - [x] **Project Scaffolding**: Create directory structure, README, SPECIFICATION. <!-- id: 0 -->

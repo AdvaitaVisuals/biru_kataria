@@ -46,7 +46,7 @@ async def manual_test():
         return {"error": "Configuration Missing on Server", "diag": diag}
         
     try:
-        resp = send_whatsapp_message(settings.admin_number, "🧬 *Biru Bhai System Test*\n\nBhai, agar ye message mil raha hai toh pipeline ekdum 'Chaka-chak' hai! 🥃")
+        resp = send_whatsapp_message(settings.admin_number, "🧬 *Goga Bhai System Test*\n\nBhai, agar ye message mil raha hai toh pipeline ekdum 'Chaka-chak' hai! 🥃")
         if resp is None:
             return {"error": "Technical Failure (Check Logs)", "diag": diag}
             

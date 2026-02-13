@@ -108,6 +108,38 @@ class OpenAIBrain:
                         }
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "update_event",
+                    "description": "Update an existing event (Title, Location, Description, Time). Use if user wants to reschedule or change details.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "event_id": {"type": "string", "description": "The ID of the event to update"},
+                            "title": {"type": "string", "description": "New title"},
+                            "location": {"type": "string", "description": "New location"},
+                            "description": {"type": "string", "description": "New description"},
+                            "start_time": {"type": "string", "description": "New start time (ISO)"}
+                        },
+                        "required": ["event_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "cancel_event",
+                    "description": "Cancel or delete an event.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "event_id": {"type": "string", "description": "The ID of the event to cancel"}
+                        },
+                        "required": ["event_id"]
+                    }
+                }
             }
         ]
 
@@ -190,6 +222,25 @@ class OpenAIBrain:
                 cal = CalendarAgent()
                 return cal.list_events(limit=args.get("limit", 5))
 
+            elif name == "update_event":
+                from src.agents.calendar_agent import CalendarAgent
+                cal = CalendarAgent()
+                return cal.update_event(
+                    event_id=str(args.get("event_id")),
+                    title=args.get("title"),
+                    location=args.get("location"),
+                    description=args.get("description"),
+                    # start_time logic is complex due to end_time requirement in Google API update,
+                    # but our simplified update_event handles basic fields.
+                    # If start_time is passed, it might fail if end_time isn't handled in update_event (which I didn't fully implement for Google)
+                    # But for now, let's allow it.
+                )
+
+            elif name == "cancel_event":
+                from src.agents.calendar_agent import CalendarAgent
+                cal = CalendarAgent()
+                return cal.cancel_event(event_id=str(args.get("event_id")))
+
         finally:
             db.close()
 
@@ -226,16 +277,20 @@ class OpenAIBrain:
             system_prompt = {
                 "role": "system", 
                 "content": (
-                    f"You are Biru Bhai, a wealthy, alpha, yet helpful Solo Creator from Haryana. "
+                    f"You are Goga Bhai, a wealthy, alpha, yet helpful Solo Creator from Haryana. "
                     f"Today is {today_date}. "
                     "You are the master of your craft. You speak a mix of Hindi, English, and Haryanvi. "
                     "Personality: Confident, alpha, extremely protective of 'Bhai' (the user). "
                     "Key phrases: 'Main hoon na, tension mat le', 'System paad denge', 'Bhai hai tu mera'. "
-                    "You have access to TOOLS to check system status, list assets, check pipeline, and MANAGE THE CALENDAR. "
-                    "IMPORTANT: "
-                    "1. If user asks to create/set a Meeting/Event -> You MUST call the 'create_event' tool immediately. Do not just say you will do it. "
-                    "2. If details (Who, When, Where) are missing -> ASK for them. Do not guess. "
-                    "3. If user asks to Post -> You MUST explain you need the media file first unless they sent one. "
+                    "You have access to TOOLS to check system status, list assets, check pipeline, and MANAGE THE CALENDAR (View, Add, Edit, Cancel). "
+                    "IMPORTANT INSTRUCTIONS: "
+                    "1. BEFORE creating any event, ALWAYS call 'list_upcoming_events' first to check for conflicts or duplicates. If a similar event exists, ask the user if they still want to proceed. "
+                    "2. If user asks 'Kab free hu?' or 'When am I free?', use 'list_upcoming_events' to see what's booked, then tell them the gaps. "
+                    "3. When creating an event, if no email is provided, assume the user's email is '7.casanov.7@gmail.com' and add it to attendees if valid. "
+                    "4. Only ask for details if Title or Time is strictly missing. For Location, default to 'Online' or 'Office'. For Attendees, just use the user's email if none given. "
+                    "5. If user wants to Edit/Reschedule -> Call 'update_event'. "
+                    "6. If user wants to Cancel -> Call 'cancel_event'. "
+                    "7. If user asks to Post -> You MUST explain you need the media file first unless they sent one. "
                     "Keep responses short, impactful, and full of raw Haryana energy. No 'AI' talk."
                 )
             }

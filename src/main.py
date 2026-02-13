@@ -1,5 +1,5 @@
 """
-BIRU_BHAI — The Solo Creator OS
+GOGA_BHAI — The Solo Creator OS
 FastAPI Application Entry Point
 
 Phase 2: Intelligence Layer Active
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # APP
 # ============================================================
 app = FastAPI(
-    title="BIRU_BHAI API",
+    title="GOGA_BHAI API",
     version="0.2.0",
     description=(
         "🎬 Autonomous Personal Content OS — Single Creator Mode\n\n"
@@ -96,7 +96,7 @@ from src.config import settings
 @app.on_event("startup")
 async def startup_event():
     logger.info("=" * 50)
-    logger.info(f"BIRU_BHAI is starting up (Env: {os.environ.get('VERCEL', 'Local')})")
+    logger.info(f"GOGA_BHAI is starting up (Env: {os.environ.get('VERCEL', 'Local')})")
     logger.info("=" * 50)
 
     # Skip local FFmpeg setup on Vercel

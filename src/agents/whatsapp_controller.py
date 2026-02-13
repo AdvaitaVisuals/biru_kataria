@@ -43,7 +43,7 @@ class WhatsAppController:
         
         # 2. Handle System Commands
         elif cmd == "help":
-            response_text = "👊 *Biru Bhai is here!*\n\n1. Send YT link -> Viral clips start.\n2. Send YT link + 'summarize' -> Get wisdom fast.\n3. Type 'status' -> Check the system.\n4. Just talk to me, Bhai. I'm listening."
+            response_text = "👊 *Goga Bhai is here!*\n\n1. Send YT link -> Viral clips start.\n2. Send YT link + 'summarize' -> Get wisdom fast.\n3. Type 'status' -> Check the system.\n4. Just talk to me, Bhai. I'm listening."
             send_whatsapp_message(sender, response_text)
         else:
             # 3. AI CHAT
@@ -70,7 +70,7 @@ class WhatsAppController:
             return
             
         url = urls[0]
-        send_whatsapp_message(sender, "🚬 Biru Bhai is watching the video... Sahi cheez nikal ke deta hoon, rukiye.")
+        send_whatsapp_message(sender, "🚬 Goga Bhai is watching the video... Sahi cheez nikal ke deta hoon, rukiye.")
         
         from src.agents.youtube_summary_mcp import call_summarizer_api
         
