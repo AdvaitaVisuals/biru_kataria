@@ -20,6 +20,7 @@ from src.api.assets import router as assets_router
 from src.api.pipeline import router as pipeline_router
 from src.agents.whatsapp import router as whatsapp_router
 from src.api.calendar import router as calendar_router
+from src.api.auth import router as auth_router
 from src.schemas import HealthResponse
 
 # ============================================================
@@ -61,6 +62,7 @@ app.include_router(assets_router)
 app.include_router(pipeline_router)
 app.include_router(whatsapp_router)
 app.include_router(calendar_router)
+app.include_router(auth_router)
 
 # Mount Media for static access (Clips/Uploads)
 base_dir = "/tmp" if os.environ.get("VERCEL") else "."
@@ -97,6 +99,7 @@ from src.config import settings
 async def startup_event():
     logger.info("=" * 50)
     logger.info(f"GOGA_BHAI is starting up (Env: {os.environ.get('VERCEL', 'Local')})")
+    logger.info(f"API Base URL: {settings.api_base_url}")
     logger.info("=" * 50)
 
     # Skip local FFmpeg setup on Vercel
