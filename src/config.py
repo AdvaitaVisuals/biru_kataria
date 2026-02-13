@@ -21,10 +21,16 @@ class Settings(BaseSettings):
 
     @property
     def api_base_url(self) -> str:
-        # Default to Vercel URL or local
+        # 1. Externally set Base URL (e.g., ngrok or custom domain)
+        if os.environ.get("BASE_URL"):
+            return os.environ.get("BASE_URL").rstrip("/")
+        
+        # 2. Vercel Deployment
         if os.environ.get("VERCEL_URL"):
             return f"https://{os.environ.get('VERCEL_URL')}"
-        return "https://biru-kataria.vercel.app"
+            
+        # 3. Local Development Fallback
+        return "http://localhost:8000"
     # Credentials from .env
     openai_api_key: str = ""
     whatsapp_token: str = ""
@@ -45,6 +51,10 @@ class Settings(BaseSettings):
     # Google Calendar
     google_client_id: str = ""
     google_client_secret: str = ""
+
+    # Facebook / Meta
+    facebook_app_id: str = ""
+    facebook_app_secret: str = ""
 
     # Task Queue
     celery_broker_url: str = "redis://localhost:6379/0"

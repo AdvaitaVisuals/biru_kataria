@@ -1,7 +1,7 @@
-
 import os
 import json
 import logging
+import requests
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -11,12 +11,25 @@ from src.database import get_db
 from src.config import settings
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/auth/google", tags=["Auth"])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # Google OAuth config
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']
+GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
-@router.get("/login")
+# Facebook OAuth Config
+FB_SCOPES = [
+    "pages_show_list", 
+    "pages_read_engagement", 
+    "pages_manage_posts", 
+    "instagram_basic", 
+    "instagram_content_publish"
+]
+
+# ============================================================================
+# GOOGLE AUTH
+# ============================================================================
+
+@router.get("/google/login")
 async def google_login():
     if not settings.google_client_id or not settings.google_client_secret:
         raise HTTPException(status_code=500, detail="Google Credentials missing in .env")
@@ -35,7 +48,7 @@ async def google_login():
     
     flow = Flow.from_client_config(
         client_config,
-        scopes=SCOPES,
+        scopes=GOOGLE_SCOPES,
         redirect_uri=f"{settings.api_base_url}/auth/google/callback"
     )
     
@@ -46,7 +59,7 @@ async def google_login():
     
     return RedirectResponse(authorization_url)
 
-@router.get("/callback")
+@router.get("/google/callback")
 async def google_callback(request: Request):
     code = request.query_params.get("code")
     if not code:
@@ -66,15 +79,13 @@ async def google_callback(request: Request):
     
     flow = Flow.from_client_config(
         client_config,
-        scopes=SCOPES,
+        scopes=GOOGLE_SCOPES,
         redirect_uri=f"{settings.api_base_url}/auth/google/callback"
     )
     
     flow.fetch_token(code=code)
     credentials = flow.credentials
     
-    # In a real app, we save this to a database or encrypted storage
-    # For now, we'll store it in a local file as a "token.json" (Vercel has limited persistence, so DB is better)
     token_data = {
         'token': credentials.token,
         'refresh_token': credentials.refresh_token,
@@ -84,11 +95,80 @@ async def google_callback(request: Request):
         'scopes': credentials.scopes
     }
     
-    # TODO: Save to a secure place. For now, we log that it was successful.
-    logger.info("Google OAuth Token generated successfully")
-    
-    # Save to a temporary location for the agent to use
     with open("google_token.json", "w") as f:
         json.dump(token_data, f)
         
-    return {"status": "SUCCESS", "message": "Google Calendar linked! Biru Bhai can now manage your events."}
+    return {"status": "SUCCESS", "message": "Google Calendar linked! Goga Bhai can now manage your events."}
+
+# ============================================================================
+# FACEBOOK AUTH
+# ============================================================================
+
+@router.get("/facebook/login")
+async def facebook_login():
+    if not settings.facebook_app_id or not settings.facebook_app_secret:
+        raise HTTPException(status_code=500, detail="Facebook Credentials (App ID/Secret) missing in .env")
+
+    redirect_uri = f"{settings.api_base_url}/auth/facebook/callback"
+    scope_str = ",".join(FB_SCOPES)
+    
+    # State should ideally be random string, using 'birubhai_state' for simplicity
+    auth_url = (
+        f"https://www.facebook.com/v18.0/dialog/oauth?"
+        f"client_id={settings.facebook_app_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&state=birubhai_state"
+        f"&scope={scope_str}"
+    )
+    
+    return RedirectResponse(auth_url)
+
+
+@router.get("/facebook/callback")
+async def facebook_callback(request: Request):
+    code = request.query_params.get("code")
+    error = request.query_params.get("error")
+    
+    if error:
+        return {"status": "ERROR", "message": f"Facebook Login Failed: {error}"}
+    if not code:
+        return {"status": "ERROR", "message": "No code provided"}
+
+    redirect_uri = f"{settings.api_base_url}/auth/facebook/callback"
+
+    # Exchange Code for Access Token
+    token_url = (
+        f"https://graph.facebook.com/v18.0/oauth/access_token?"
+        f"client_id={settings.facebook_app_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&client_secret={settings.facebook_app_secret}"
+        f"&code={code}"
+    )
+    
+    try:
+        resp = requests.get(token_url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        access_token = data.get("access_token")
+        
+        if not access_token:
+             return {"status": "ERROR", "message": "Failed to retrieve access token"}
+
+        # Exchange for Long-Lived Token (optional but recommended)
+        # We'll save the token we got for now.
+        
+        token_data = {
+            "access_token": access_token,
+            "token_type": data.get("token_type"),
+            "expires_in": data.get("expires_in")
+        }
+        
+        # Save to local file
+        with open("facebook_token.json", "w") as f:
+            json.dump(token_data, f)
+            
+        return {"status": "SUCCESS", "message": "Facebook Login Successful! Token saved."}
+
+    except Exception as e:
+        logger.error(f"Facebook Auth Error: {e}")
+        return {"status": "ERROR", "message": str(e)}
