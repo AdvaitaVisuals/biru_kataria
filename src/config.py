@@ -26,11 +26,15 @@ class Settings(BaseSettings):
             return os.environ.get("BASE_URL").rstrip("/")
         
         # 2. Vercel Deployment
+        # 2. Vercel Deployment (or just hardcode the production URL for stability if dynamic one fails)
         if os.environ.get("VERCEL_URL"):
-            return f"https://{os.environ.get('VERCEL_URL')}"
-            
-        # 3. Local Development Fallback
-        return "http://localhost:8000"
+             return f"https://{os.environ.get('VERCEL_URL')}"
+        
+        # Fallback to production URL if not running locally with clear indication
+        # This ensures that even if VERCEL_URL is missing but we are in a cloud context (or just want to force it), we use the public one.
+        # But for localhost development, we want localhost.
+        # Let's trust BASE_URL first.
+        return "https://biru-kataria.vercel.app" if os.environ.get("VERCEL") else "http://localhost:8000"
     # Credentials from .env
     openai_api_key: str = ""
     whatsapp_token: str = ""
