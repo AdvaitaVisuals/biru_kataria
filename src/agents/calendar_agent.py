@@ -13,7 +13,7 @@ class CalendarAgent:
     Handles appointments, recordings, and viral event timing.
     """
     
-    def create_event(self, title: str, start_time: str, end_time: str = None, description: str = "", event_type: str = "MEETING"):
+    def create_event(self, title: str, start_time: str, end_time: str = None, description: str = "", event_type: str = "MEETING", location: str = None, attendees: str = None):
         db = SessionLocal()
         try:
             # Parse ISO strings
@@ -25,7 +25,9 @@ class CalendarAgent:
                 description=description,
                 start_time=start_dt,
                 end_time=end_dt,
-                event_type=event_type
+                event_type=event_type,
+                location=location,
+                attendees=attendees
             )
             db.add(event)
             db.commit()
@@ -46,7 +48,9 @@ class CalendarAgent:
                 "title": e.title,
                 "time": e.start_time.strftime("%Y-%m-%d %H:%M"),
                 "status": e.status,
-                "type": e.event_type
+                "type": e.event_type,
+                "location": e.location,
+                "attendees": e.attendees
             } for e in events]
         finally:
             db.close()

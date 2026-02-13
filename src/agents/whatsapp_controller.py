@@ -47,7 +47,7 @@ class WhatsAppController:
             send_whatsapp_message(sender, response_text)
         else:
             # 3. AI CHAT
-            response_text = self.brain.chat_response(text)
+            response_text = self.brain.chat_response(text, sender=sender)
             send_whatsapp_message(sender, response_text)
 
         # Update log with response

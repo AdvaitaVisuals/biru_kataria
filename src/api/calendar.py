@@ -12,6 +12,8 @@ class EventCreate(BaseModel):
     end_time: Optional[str] = None
     description: Optional[str] = ""
     event_type: Optional[str] = "MEETING"
+    location: Optional[str] = None
+    attendees: Optional[str] = None
 
 @router.get("/events")
 def get_events(limit: int = 10):
@@ -26,7 +28,9 @@ def create_event(event: EventCreate):
         start_time=event.start_time,
         end_time=event.end_time,
         description=event.description,
-        event_type=event.event_type
+        event_type=event.event_type,
+        location=event.location,
+        attendees=event.attendees
     )
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))

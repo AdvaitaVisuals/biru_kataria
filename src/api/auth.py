@@ -15,23 +15,20 @@ router = APIRouter(prefix="/auth/google", tags=["Auth"])
 
 # Google OAuth config
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
-# Use environment variables for Client ID and Secret
-CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
 @router.get("/login")
 async def google_login():
-    if not CLIENT_ID or not CLIENT_SECRET:
+    if not settings.google_client_id or not settings.google_client_secret:
         raise HTTPException(status_code=500, detail="Google Credentials missing in .env")
         
     client_config = {
         "web": {
-            "client_id": CLIENT_ID,
+            "client_id": settings.google_client_id,
             "project_id": "biru-bhai-os",
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_secret": CLIENT_SECRET,
+            "client_secret": settings.google_client_secret,
             "redirect_uris": [f"{settings.api_base_url}/auth/google/callback"]
         }
     }
@@ -57,12 +54,12 @@ async def google_callback(request: Request):
         
     client_config = {
         "web": {
-            "client_id": CLIENT_ID,
+            "client_id": settings.google_client_id,
             "project_id": "biru-bhai-os",
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_secret": CLIENT_SECRET,
+            "client_secret": settings.google_client_secret,
             "redirect_uris": [f"{settings.api_base_url}/auth/google/callback"]
         }
     }

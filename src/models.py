@@ -130,6 +130,7 @@ class Event(Base):
     end_time = Column(DateTime(timezone=True), index=True)
     
     location = Column(String, nullable=True)
+    attendees = Column(String, nullable=True) # Person name(s)
     event_type = Column(String, default="MEETING") # MEETING, RECORDING, VIRAL_DROP
     
     status = Column(String, default="SCHEDULED") # SCHEDULED, COMPLETED, CANCELLED

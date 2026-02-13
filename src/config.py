@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     youtube_client_secret: str = ""
     youtube_refresh_token: str = ""
 
+    # Google Calendar
+    google_client_id: str = ""
+    google_client_secret: str = ""
+
     # Task Queue
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/0"

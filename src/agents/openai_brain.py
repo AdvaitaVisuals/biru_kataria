@@ -81,13 +81,15 @@ class OpenAIBrain:
                 "type": "function",
                 "function": {
                     "name": "create_event",
-                    "description": "Schedule a new event, meeting, or recording in Biru Bhai's calendar.",
+                    "description": "Schedule a new event, meeting, or recording in Biru Bhai's calendar. Extract date, time, location (venue), and attendees (person name).",
                     "parameters": {
                         "type": "object",
                         "properties": {
                             "title": {"type": "string", "description": "Title of the event"},
-                            "start_time": {"type": "string", "description": "ISO format start time (e.g. 2024-02-13T10:00:00)"},
+                            "start_time": {"type": "string", "description": "ISO format start time (e.g. 2024-02-13T10:00:00). Ensure the date is correct relative to today."},
                             "description": {"type": "string", "description": "Details about the event"},
+                            "location": {"type": "string", "description": "Location or Venue of the event"},
+                            "attendees": {"type": "string", "description": "Name(s) of person/people involved"},
                             "event_type": {"type": "string", "enum": ["MEETING", "RECORDING", "VIRAL_DROP"]}
                         },
                         "required": ["title", "start_time"]
@@ -178,7 +180,9 @@ class OpenAIBrain:
                     title=args.get("title"),
                     start_time=args.get("start_time"),
                     description=args.get("description", ""),
-                    event_type=args.get("event_type", "MEETING")
+                    event_type=args.get("event_type", "MEETING"),
+                    location=args.get("location"),
+                    attendees=args.get("attendees")
                 )
 
             elif name == "list_upcoming_events":
@@ -189,23 +193,54 @@ class OpenAIBrain:
         finally:
             db.close()
 
-    def chat_response(self, user_message: str) -> str:
-        """Generates a witty Biru Bhai style response, using tools if needed."""
+    def chat_response(self, user_message: str, sender: str = None) -> str:
+        """Generates a witty Biru Bhai style response, using tools if needed. Can include context from 'sender' history."""
+        from datetime import datetime
+        from src.database import SessionLocal
+        from src.models import WhatsAppMessage
+        
+        today_date = datetime.now().strftime("%d %b %Y, %A")
+        
+        # Build context from DB if sender is known
+        context_messages = []
+        if sender:
+            db = SessionLocal()
+            try:
+                # Fetch last 5 interactions (excluding current pending one)
+                # We skip the most recent one (offset 1) because it is the current message we are processing.
+                history = db.query(WhatsAppMessage).filter(WhatsAppMessage.sender == sender).order_by(WhatsAppMessage.timestamp.desc()).offset(1).limit(5).all()
+                history.reverse()
+                
+                for msg in history:
+                    if msg.message:
+                        context_messages.append({"role": "user", "content": msg.message})
+                    if msg.response:
+                        context_messages.append({"role": "assistant", "content": msg.response})
+            except Exception as e:
+                logger.error(f"Failed to fetch context: {e}")
+            finally:
+                db.close()
+
         try:
-            messages = [
-                {"role": "system", "content": (
-                    "You are Biru Bhai, a wealthy, alpha, yet helpful Solo Creator from Haryana. "
+            # System Prompt
+            system_prompt = {
+                "role": "system", 
+                "content": (
+                    f"You are Biru Bhai, a wealthy, alpha, yet helpful Solo Creator from Haryana. "
+                    f"Today is {today_date}. "
                     "You are the master of your craft. You speak a mix of Hindi, English, and Haryanvi. "
                     "Personality: Confident, alpha, extremely protective of 'Bhai' (the user). "
                     "Key phrases: 'Main hoon na, tension mat le', 'System paad denge', 'Bhai hai tu mera'. "
-                    "You have access to TOOLS to check the system status, list assets, check pipeline progress, and MANAGE THE CALENDAR. "
-                    "If the user asks to POST on Instagram/Facebook/YouTube, tell them: 'Haan bhai, bas photo/video bhej de aur caption mein *Post on Insta* ya *Post on FB* likh de. Main sambhal lunga.' "
-                    "Explain that you need the media file to proceed. "
-                    "If the user says 'Meeting set kar de' or 'Upcoming events bata', USE YOUR TOOLS. "
+                    "You have access to TOOLS to check system status, list assets, check pipeline, and MANAGE THE CALENDAR. "
+                    "IMPORTANT: "
+                    "1. If user asks to create/set a Meeting/Event -> You MUST call the 'create_event' tool immediately. Do not just say you will do it. "
+                    "2. If details (Who, When, Where) are missing -> ASK for them. Do not guess. "
+                    "3. If user asks to Post -> You MUST explain you need the media file first unless they sent one. "
                     "Keep responses short, impactful, and full of raw Haryana energy. No 'AI' talk."
-                )},
-                {"role": "user", "content": user_message}
-            ]
+                )
+            }
+            
+            messages = [system_prompt] + context_messages + [{"role": "user", "content": user_message}]
             
             response = self.client.chat.completions.create(
                 model="gpt-4o",
