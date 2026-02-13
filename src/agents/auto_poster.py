@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import logging
 import requests
@@ -14,18 +15,23 @@ class AutoPoster:
         """Initialize with settings from src.config."""
         self.instagram_access_token = settings.instagram_access_token
         self.instagram_user_id = settings.instagram_business_account_id
-        
-        # Facebook Page ID (can be overridden by dynamic discovery)
+
+        # Facebook — dedicated token + page ID
+        self.facebook_access_token = settings.facebook_access_token
         self.facebook_page_id = settings.facebook_page_id
-        
+
         self.youtube_client_id = settings.youtube_client_id
         self.youtube_client_secret = settings.youtube_client_secret
         self.youtube_refresh_token = settings.youtube_refresh_token
         self.request_timeout = 30
-        
+
         # Try to load credentials from dynamic login files
         self._load_dynamic_credentials()
-        
+
+        # Auto-discover Page ID if we have a token but no page ID
+        if self.facebook_access_token and not self.facebook_page_id:
+            self._discover_facebook_page()
+
         logger.info("AutoPoster initialized with configuration")
 
     def _load_dynamic_credentials(self):
@@ -67,8 +73,11 @@ class AutoPoster:
             
             if target_page:
                 # We found a page!
-                self.instagram_access_token = target_page.get("access_token") # Page Token is better for posting
+                page_token = target_page.get("access_token")
+                self.facebook_access_token = page_token
                 self.facebook_page_id = target_page.get("id")
+                # Page token also works for IG posting
+                self.instagram_access_token = page_token
                 
                 if target_page.get("instagram_business_account"):
                     self.instagram_user_id = target_page["instagram_business_account"].get("id")
@@ -78,6 +87,46 @@ class AutoPoster:
                 
         except Exception as e:
             logger.error(f"Failed to load dynamic Facebook credentials: {e}")
+
+    def _discover_facebook_page(self):
+        """Auto-discover Facebook Page ID + IG Business Account from the Graph API token."""
+        try:
+            url = f"https://graph.facebook.com/v18.0/me/accounts?fields=access_token,instagram_business_account,name,id&access_token={self.facebook_access_token}"
+            res = requests.get(url, timeout=10)
+            res.raise_for_status()
+            pages = res.json().get("data", [])
+
+            if not pages:
+                logger.warning("No Facebook Pages found for this token")
+                return
+
+            # Prefer page with IG Business Account linked
+            target = None
+            for p in pages:
+                if p.get("instagram_business_account"):
+                    target = p
+                    break
+            if not target:
+                target = pages[0]
+
+            self.facebook_page_id = target["id"]
+            # Page-level token is better for posting than user token
+            page_token = target.get("access_token")
+            if page_token:
+                self.facebook_access_token = page_token
+
+            ig = target.get("instagram_business_account")
+            if ig:
+                self.instagram_user_id = ig["id"]
+                # IG posting also uses the page token
+                if not self.instagram_access_token:
+                    self.instagram_access_token = page_token
+                logger.info(f"Auto-discovered FB Page '{target.get('name')}' (ID: {self.facebook_page_id}) + IG Account: {self.instagram_user_id}")
+            else:
+                logger.info(f"Auto-discovered FB Page '{target.get('name')}' (ID: {self.facebook_page_id}), no IG linked")
+
+        except Exception as e:
+            logger.error(f"Facebook Page auto-discovery failed: {e}")
 
     def post_to_instagram_reels(self, video_url: str, caption: str) -> dict:
         """
@@ -517,8 +566,7 @@ class AutoPoster:
         """
         Post a photo to Facebook Page. Supports local file path or URL.
         """
-        # Use our dynamically loaded token (Page Token)
-        fb_token = self.instagram_access_token
+        fb_token = self.facebook_access_token
         target_id = self.facebook_page_id
         
         if not fb_token: return {"status": "SKIPPED", "message": "No FB Token"}
@@ -574,8 +622,7 @@ class AutoPoster:
         Post a clip to Facebook Video/Reels.
         Note: Requires Page Access Token with 'pages_manage_posts' permission.
         """
-        # Use our dynamically loaded token (Page Token)
-        fb_token = self.instagram_access_token
+        fb_token = self.facebook_access_token
         target_id = self.facebook_page_id
 
         if not fb_token:
